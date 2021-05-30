@@ -46,3 +46,6 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+src/*.o
+src/*.dll

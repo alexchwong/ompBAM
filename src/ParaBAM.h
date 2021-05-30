@@ -1,8 +1,8 @@
-#ifndef _ParaBAM
-#define ParaBAM
+#ifndef _ParaBAM_DEF
+#define ParaBAM_DEF
 
 #include <zlib.h>
-// #include <zconf.h>
+#include <zconf.h>
 #include <iostream>
 #include <fstream>    // std::ifstream
 #include <algorithm>  // std::sort
@@ -17,9 +17,7 @@
 #include <omp.h>
 #endif
 
-#ifndef Rcout
-#define Rcout cout
-#endif
+using namespace std;
 
 union pb_header {
   char c[8];
@@ -28,7 +26,6 @@ union pb_header {
     int32_t l_text;
   } magic;
 };
-
 
 struct pb_core_32{
   // uint32_t block_size;
@@ -45,51 +42,46 @@ struct pb_core_32{
   int32_t tlen;
 };
 
-static const int bamGzipHeadLength = 16;  // +2 a uint16 with the full block length.
-static const char bamGzipHead[bamGzipHeadLength+1] = 
-		"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00\x42\x43\x02\x00";
-static const int bamEOFlength = 28;
-static const char bamEOF[bamEOFlength+1] =
-		"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00\x42\x43\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-
-static const int magiclength = 4;
-static const char magicstring[magiclength+1] = "\x42\x41\x4d\x01";
-
-
 class ParaBAM {
   private:
-    unsigned int n_threads = 1;
+// ParaBAM settings
+    size_t FILE_BUFFER_CAP = 100000000;     // 1e8
+    size_t DATA_BUFFER_CAP = 1000000000;    // 1e9
+    unsigned int FILE_BUFFER_SEGMENTS = 5;  // Divide file buffer into n segments
+    unsigned int paraBAM_n_threads = 1;
   
-    istream * IN;
+    std::istream * IN;
     size_t IS_LENGTH;     // size of BAM file (Input Stream Length)
     
-    size_t LAST_READ_BUFFER_POS = 0;      // The position of the last incomplete read. 
+    size_t LAST_READ_BUFFER_POS;      // The position of the last incomplete read. 
     // There is no split read if LAST_READ_BUFFER_POS = BUFFER_SIZE
   
     // Header storage:
     char * magic_header;
-    uint32_t l_text = 0;
+    uint32_t l_text;
     char * headertext;
-    uint32_t n_ref = 0;
-    std::vector<string> chr_names;
+    uint32_t n_ref;
+    std::vector<std::string> chr_names;
     std::vector<uint32_t> chr_lens;
   
-    char * file_buf; size_t file_buf_cap = 0; size_t file_buf_cursor = 0;
-    char * data_buf; size_t data_buf_cap = 0; size_t data_buf_cursor = 0
+    // Data buffers
+    char * file_buf; size_t file_buf_cap; size_t file_buf_cursor;
+    char * next_file_buf; size_t next_file_buf_cap;
+
+    char * data_buf; size_t data_buf_cap; size_t data_buf_cursor;
     
-    std::vector<pb_core_32 *> read_ptrs;
+    std::vector<char *> read_ptrs;
+    std::vector<uint32_t> read_ptr_partitions;
     std::vector<uint32_t> read_cursors;
-    
-    size_t load_from_file(size_t n_bytes_from_file);
+
+    size_t load_from_file(size_t n_bytes);
+    size_t fill_file_buffer() {return(load_from_file(FILE_BUFFER_CAP));};
+    size_t read_file_chunk_to_spare_buffer(size_t n_bytes);
+
     size_t decompress(size_t n_bytes_to_decompress);
     
-  public:
-    ~ParaBAM();
-
-    int openFile(std::istream *in_stream, unsigned int n_threads_to_use); // opens file stream, checks EOF and file size
-    int readHeader();
-    int obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens);
-
+    int swap_file_buffer();
+    int clean_data_buffer(size_t n_bytes_to_decompress);
 
     unsigned int read(char * dest, unsigned int len);  // returns the number of bytes actually read
     unsigned int ignore(unsigned int len);
@@ -97,10 +89,25 @@ class ParaBAM {
 
     bool fail() {return(IN->fail());};
     size_t tellg() {return((size_t)IN->tellg());};
+  public:
+    ParaBAM();
+    ParaBAM(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int file_buffer_segments);
+    ~ParaBAM();
+
+    int SetInputHandle(std::istream *in_stream, unsigned int n_threads_to_use); // opens file stream, checks EOF and file size
+    int readHeader();
+    int obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens);
+
     size_t GetLength() { return(IS_LENGTH); };
+
+    int fillReads();  // Returns 1 if no more reads available
     
-    
-}
+    // Read functions:
+    char * supplyRead(unsigned int thread_number = 0);
+    pb_core_32 * readCore(char * read);
+    char *readName(char * read, uint8_t & len);
+    uint32_t *readCigar(char * read, uint16_t & len);
+};
 
 
 #endif
