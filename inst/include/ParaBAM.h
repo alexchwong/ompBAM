@@ -1,17 +1,14 @@
 #ifndef _ParaBAM_DEF
-#define ParaBAM_DEF
+#define _ParaBAM_DEF
 
+// [[Rcpp::depends(zlibbioc)]]
 #include <zlib.h>
 #include <zconf.h>
-#include <iostream>
+
 #include <fstream>    // std::ifstream
-#include <algorithm>  // std::sort
-#include <functional> // std::function
 
 #include <cstring>
 #include <vector>
-#include <map>
-#include <sys/types.h>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -80,7 +77,8 @@ class ParaBAM {
 
     size_t decompress(size_t n_bytes_to_decompress);
     
-    int swap_file_buffer();
+    int swap_file_buffer_if_needed();
+    unsigned int calculate_chunks_to_load_to_secondary_buffer();
     int clean_data_buffer(size_t n_bytes_to_decompress);
 
     unsigned int read(char * dest, unsigned int len);  // returns the number of bytes actually read
@@ -109,5 +107,7 @@ class ParaBAM {
     uint32_t *readCigar(char * read, uint16_t & len);
 };
 
+#include "ParaBAM_fns.h"
 
 #endif
+
