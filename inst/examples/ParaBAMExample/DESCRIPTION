@@ -1,0 +1,13 @@
+Package: ParaBAMExample
+Type: Package
+Title: Example use of the ParaBAM package
+Version: 0.2
+Date: 2021-05-31
+Authors@R: c(person("Alex Chit Hei", "Wong", email="a.wong@centenary.org.au", 
+		role=c("aut", "cre", "cph")))   
+Maintainer: Alex Wong <a.wong@centenary.org.au>
+Description: Example use of the ParaBAM package in a package
+License: MIT
+Depends: Rcpp (>= 1.0.5), zlibbioc, ParaBAM
+LinkingTo: Rcpp, zlibbioc, ParaBAM
+RoxygenNote: 7.1.1

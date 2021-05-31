@@ -1,9 +1,11 @@
 #include "ParaBAM.h"
+// [[Rcpp::depends(ParaBAM)]]
+
 #include "Rcpp.h"
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-int test_main(std::string bam_file, int n_threads_to_use = 1){
+int test_ParaBAM(std::string bam_file, int n_threads_to_use = 1){
 
   std::ifstream inbam_stream;   
   inbam_stream.open(bam_file, std::ios::in | std::ios::binary);
@@ -13,14 +15,14 @@ int test_main(std::string bam_file, int n_threads_to_use = 1){
   
   inbam.readHeader();
   
-  // std::vector<std::string> s_chr_names;
-  // std::vector<uint32_t> u32_chr_lens;
+  std::vector<std::string> s_chr_names;
+  std::vector<uint32_t> u32_chr_lens;
   
-  // int ret = inbam.obtainChrs(s_chr_names, u32_chr_lens);
+  int ret = inbam.obtainChrs(s_chr_names, u32_chr_lens);
   
-  // for(int i = 0; i < ret; i++) {
-    // Rcout << s_chr_names.at(i) << '\t' << u32_chr_lens.at(i) << '\n';
-  // }
+  for(int i = 0; i < ret; i++) {
+    Rcout << s_chr_names.at(i) << '\t' << u32_chr_lens.at(i) << '\n';
+  }
   
   inbam.fillReads();
   
