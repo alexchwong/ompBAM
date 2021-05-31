@@ -2,8 +2,6 @@
 #include "Rcpp.h"
 using namespace Rcpp;
 
-// [[Rcpp::interfaces(r, cpp)]]
-
 static const int bamGzipHeadLength = 16;  // +2 a uint16 with the full block length.
 static const char bamGzipHead[bamGzipHeadLength+1] = 
 		"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00\x42\x43\x02\x00";
@@ -17,6 +15,7 @@ static const char magicstring[magiclength+1] = "\x42\x41\x4d\x01";
 ParaBAM::ParaBAM() {
   file_buf = NULL;
   data_buf = NULL;
+  next_file_buf = NULL;
   file_buf_cap = 0; file_buf_cursor = 0;
   data_buf_cap = 0; data_buf_cursor = 0;
   next_file_buf_cap = 0;
@@ -39,6 +38,7 @@ ParaBAM::ParaBAM() {
 ParaBAM::ParaBAM(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int file_buffer_segments) {
   file_buf = NULL;
   data_buf = NULL;
+  next_file_buf = NULL;
   file_buf_cap = 0; file_buf_cursor = 0;
   data_buf_cap = 0; data_buf_cursor = 0;
   next_file_buf_cap = 0;
@@ -63,13 +63,16 @@ ParaBAM::ParaBAM(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int fi
 }
 
 ParaBAM::~ParaBAM() {
-  if(file_buf) free(file_buf);
+  if(file_buf) free(file_buf); 
   file_buf = NULL;
-  if(data_buf) free(data_buf);
+  if(data_buf) free(data_buf); 
   data_buf = NULL;
-  if(magic_header) free(magic_header);
+  if(next_file_buf) free(next_file_buf); 
+  next_file_buf = NULL;
+
+  if(magic_header) free(magic_header); 
   magic_header = NULL;
-  if(headertext) free(headertext);
+  if(headertext) free(headertext); 
   headertext = NULL;
 }
 
@@ -166,35 +169,36 @@ size_t ParaBAM::load_from_file(size_t n_bytes) {
     First removes data upstream of file cursor
     Then fills buffer to n_bytes
   */
-  // Rcout << "load from file()\n'";
+  // Rcout << "load from file()\n";
   char * file_tmp;
   char * residual_data_buffer;
   size_t residual = file_buf_cap-file_buf_cursor;
+  // Rcout << "Residual = " << residual << '\n';
   size_t n_bytes_to_load = max(n_bytes, residual);
   n_bytes_to_load = min(n_bytes_to_load, FILE_BUFFER_CAP);  // Cap at file buffer
-  // Remove residual bytes to beginning of buffer:
-  if(residual > 0) {
-    // have to move bytes around
-    residual_data_buffer = (char*)malloc(residual + 1);
-    memcpy(residual_data_buffer, file_buf + file_buf_cursor, residual);
-  
-    file_buf = (char*)realloc(file_tmp = file_buf, n_bytes_to_load + 1);
-    memcpy(file_buf, residual_data_buffer, residual);
-    free(residual_data_buffer);
-  } else {
-    // residual == 0
-    file_buf = (char*)realloc(file_tmp = file_buf, n_bytes_to_load + 1);
-  }
-  file_buf_cursor = 0;
-  file_buf_cap = residual;
-  if(n_bytes_to_load <= file_buf_cap) return(0);
   
   size_t n_bytes_to_read = n_bytes_to_load - residual;
   size_t n_bytes_remaining = IS_LENGTH - IN->tellg();
   if(n_bytes_to_read > n_bytes_remaining) n_bytes_to_read = n_bytes_remaining;
   if(n_bytes_to_read == 0) return(0);
   
-  IN->read(file_buf + file_buf_cursor, n_bytes_to_read);
+  // Remove residual bytes to beginning of buffer:
+  if(residual > 0) {
+    // have to move bytes around
+    residual_data_buffer = (char*)malloc(residual + 1);
+    memcpy(residual_data_buffer, file_buf + file_buf_cursor, residual);
+  
+    file_buf = (char*)realloc(file_tmp = file_buf, n_bytes_to_read + residual + 1);
+    memcpy(file_buf, residual_data_buffer, residual);
+    free(residual_data_buffer);
+  } else {
+    // residual == 0
+    file_buf = (char*)realloc(file_tmp = file_buf, n_bytes_to_read + 1);
+  }
+  file_buf_cursor = 0;
+  file_buf_cap = residual;
+  
+  IN->read(file_buf + file_buf_cap, n_bytes_to_read);
   file_buf_cap += n_bytes_to_read;
   // Rcout << "load from file() finished - n_bytes_to_read = " << n_bytes_to_read << "\n";
   return(n_bytes_to_read);
@@ -300,15 +304,17 @@ size_t ParaBAM::decompress(size_t n_bytes_to_decompress) {
   
   std::vector<size_t> src_bgzf_pos;
   std::vector<size_t> dest_bgzf_pos;
-  bool check_gzip_head = true;
+  bool check_gzip_head = false;
   uint32_t * u32; uint16_t * u16;
 
   // Profile the file and increment until the destination buffer is reached
   unsigned int bgzf_count = 0;
   while(1) {
-    if(bgzf_count % 10000 == 1) check_gzip_head = true; // Check every 10000 blocks
-    
-    // Check bamGzipHead
+    // Abort if cannot read smallest possible bgzf block:
+    if(file_buf_cursor + src_cursor + 28 > file_buf_cap) break;
+
+    // Check bamGzipHead every 1000 blocks
+    if(bgzf_count % 1000 == 0) check_gzip_head = true; // Check every 10000 blocks
     if(check_gzip_head) {
       // Rcout << "file_buf_cursor " << file_buf_cursor << " src_cursor " << src_cursor << '\n';
       if(strncmp(bamGzipHead, file_buf + file_buf_cursor + src_cursor, bamGzipHeadLength) != 0) {
@@ -318,15 +324,12 @@ size_t ParaBAM::decompress(size_t n_bytes_to_decompress) {
       }
     }
     
-    // Abort if cannot read smallest possible bgzf block:
-    if(file_buf_cursor + src_cursor + 28 > file_buf_cap) break;
-    u16 = (uint16_t*)(file_buf + file_buf_cursor + src_cursor + 16);
-       
     // Abort if cannot read entire bgzf block:
+    u16 = (uint16_t*)(file_buf + file_buf_cursor + src_cursor + 16);
     if(file_buf_cursor + src_cursor + (*u16+1) > file_buf_cap) break;
-    u32 = (uint32_t*)(file_buf + file_buf_cursor + src_cursor + (*u16+1) - 4);
 
     // Abort if filling dest with extra data will lead to overflow
+    u32 = (uint32_t*)(file_buf + file_buf_cursor + src_cursor + (*u16+1) - 4);
     if(dest_cursor + *u32 > max_bytes_to_decompress) break;
 
     // If checks passed, designate these blocks to be decompressed
@@ -384,60 +387,68 @@ size_t ParaBAM::decompress(size_t n_bytes_to_decompress) {
     } else {
 
       unsigned int i = thrd_partitions.at(k);
-      
+
+      size_t thread_src_cursor = 0;
+      size_t thread_dest_cursor = 0;
+
+      uint32_t crc = 0;
+      uint32_t * crc_check;
+      uint32_t src_size = 0;
+      uint32_t dest_size = 0;
+
+      z_stream * zs;
       while(i < thrd_partitions.at(k+1) && !error_occurred) {
-        size_t thread_src_cursor = 0;
-        size_t thread_dest_cursor = 0;
-        
         thread_src_cursor = src_bgzf_pos.at(i);
         thread_dest_cursor = dest_bgzf_pos.at(i);
-        
-        uint32_t * crc_check = (uint32_t *)(file_buf + src_bgzf_pos.at(i+1) - 8);
-        uint32_t src_size = src_bgzf_pos.at(i+1) - thread_src_cursor;
-        uint32_t dest_size = dest_bgzf_pos.at(i+1) - thread_dest_cursor;
-        // Rcout << thread_src_cursor << "\t" << thread_dest_cursor << '\t' << src_size << "\t" << dest_size << '\n';
-        z_stream zs;
-        zs.zalloc = NULL; zs.zfree = NULL; zs.msg = NULL;
-        zs.next_in = (Bytef*)(file_buf + thread_src_cursor + 18);
-        zs.avail_in = src_size - 18;
-        zs.next_out = (Bytef*)(data_buf + thread_dest_cursor);
-        zs.avail_out = dest_size;
+        crc_check = (uint32_t *)(file_buf + src_bgzf_pos.at(i+1) - 8);
+        src_size = src_bgzf_pos.at(i+1) - thread_src_cursor;
+        dest_size = dest_bgzf_pos.at(i+1) - thread_dest_cursor;
 
-        int ret = inflateInit2(&zs, -15);
+        // Rcout << thread_src_cursor << "\t" << thread_dest_cursor << '\t' << src_size << "\t" << dest_size << '\n';
+        zs = new z_stream;
+        zs->zalloc = NULL; zs->zfree = NULL; zs->msg = NULL;
+        zs->next_in = (Bytef*)(file_buf + thread_src_cursor + 18);
+        zs->avail_in = src_size - 18;
+        zs->next_out = (Bytef*)(data_buf + thread_dest_cursor);
+        zs->avail_out = dest_size;
+
+        int ret = inflateInit2(zs, -15);
         if(ret != Z_OK) {
-            Rcout << "Exception during BAM decompression - inflateInit2() fail: (" << ret << ") "
-              "BGZF block number" << i << '\n';
+          Rcout << "Exception during BAM decompression - inflateInit2() fail: (" << ret << ") "
+            "BGZF block number" << i << '\n';
             
 #ifdef _OPENMP
 #pragma omp critical
 #endif
-            error_occurred = true;
+          error_occurred = true;
         }
         if(!error_occurred) {
-          ret = inflate(&zs, Z_FINISH);
+          ret = inflate(zs, Z_FINISH);
           if(ret != Z_OK && ret != Z_STREAM_END) {
-              Rcout << "Exception during BAM decompression - inflate() fail: (" << ret << ") "
-                "BGZF block number" << i << '\n';
+            Rcout << "Exception during BAM decompression - inflate() fail: (" << ret << ") "
+              "BGZF block number" << i << '\n';
 #ifdef _OPENMP
 #pragma omp critical
 #endif
-              error_occurred = true;
-          }
-          ret = inflateEnd(&zs);
-
-          if(!error_occurred) {
-            uint32_t crc = crc32(crc32(0L, NULL, 0L), 
-              (Bytef*)(data_buf + thread_dest_cursor), dest_size);
-            if(*crc_check != crc) {
-                Rcout << "CRC fail during BAM decompression" << ", BGZF block number" << i << '\n';
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-                error_occurred = true;
-            }
+            error_occurred = true;
           }
         }
+        if(!error_occurred) {
+          ret = inflateEnd(zs);
 
+          crc = crc32(crc32(0L, NULL, 0L), 
+          (Bytef*)(data_buf + thread_dest_cursor), dest_size);
+          if(*crc_check != crc) {
+            Rcout << "CRC fail during BAM decompression" << ", BGZF block number" << i << '\n';
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+            error_occurred = true;
+          }
+
+        }
+        
+        delete zs;
         i++;
       }
     }
