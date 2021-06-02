@@ -24,20 +24,7 @@ union pb_header {
   } magic;
 };
 
-struct pb_core_32{
-  // uint32_t block_size;
-  int32_t refID;
-  int32_t pos;
-  uint8_t l_read_name;
-  uint8_t mapq;
-  uint16_t bin;
-  uint16_t n_cigar_op;
-  uint16_t flag;
-  uint32_t l_seq;
-  int32_t next_refID;
-  int32_t next_pos;
-  int32_t tlen;
-};
+
 
 class ParaBAM {
   private:
@@ -102,7 +89,7 @@ class ParaBAM {
     
     // Read functions:
     char * supplyRead(unsigned int thread_number = 0);
-    pb_core_32 * readCore(char * read);
+    pbam_core_32 * readCore(char * read);
     char *readName(char * read, uint8_t & len);
     uint32_t *readCigar(char * read, uint16_t & len);
 };
