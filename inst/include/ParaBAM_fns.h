@@ -616,14 +616,14 @@ char * ParaBAM::supplyRead(unsigned int thread_number) {
   return(read);
 }
 
-pb_core_32 * ParaBAM::readCore(char * read) {
-  pb_core_32 *core = (pb_core_32*)(read + 4);
+pbam_core_32 * ParaBAM::readCore(char * read) {
+  pbam_core_32 *core = (pbam_core_32*)(read + 4);
   return(core);
 }
 
 char * ParaBAM::readName(char * read, uint8_t & len) {
   if(!read) return(NULL);
-  pb_core_32 * core = (pb_core_32 *)(read + 4);
+  pbam_core_32 * core = (pbam_core_32 *)(read + 4);
   
   len = core->l_read_name;
   char *read_name = (char*)(read + 36);
@@ -632,7 +632,7 @@ char * ParaBAM::readName(char * read, uint8_t & len) {
 
 uint32_t * ParaBAM::readCigar(char * read, uint16_t & len) {
   if(!read) return(NULL);
-  pb_core_32 * core = (pb_core_32 *)(read + 4);
+  pbam_core_32 * core = (pbam_core_32 *)(read + 4);
   
   len = core->n_cigar_op;
   uint32_t * cigar = (uint32_t*)(read + 36 + core->l_read_name);

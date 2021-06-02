@@ -9,8 +9,7 @@ License: MIT
 Depends:
   R (>= 4.0.0)
 Imports:
-	Rcpp (>= 1.0.5), zlibbioc
-LinkingTo: Rcpp, zlibbioc
+	Rcpp (>= 1.0.5), zlibbioc, devtools
 Suggests: 
     knitr, rmarkdown, testthat (>= 3.0.0)
 VignetteBuilder: knitr
