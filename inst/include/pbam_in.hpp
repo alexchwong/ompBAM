@@ -4,9 +4,9 @@
 class pbam_in {
   private:
 // pbam_in settings
-    size_t FILE_BUFFER_CAP = 1000000000;     // 1e8
+    size_t FILE_BUFFER_CAP = 200000000;     // 1e8
     size_t DATA_BUFFER_CAP = 1000000000;    // 1e9
-    unsigned int FILE_BUFFER_SEGMENTS = 5;  // Divide file buffer into n segments
+    unsigned int FILE_BUFFER_SEGMENTS = 10;  // Divide file buffer into n segments
     unsigned int threads_to_use = 1;
   
 // File particulars
@@ -126,10 +126,10 @@ pbam_in::pbam_in() {
   // Initialize buffers
   initialize_buffers();
   // Settings reset
-  FILE_BUFFER_CAP = 1000000000;
-  DATA_BUFFER_CAP = 1000000000;
-  FILE_BUFFER_SEGMENTS = 5;
-  threads_to_use = 1;
+  // FILE_BUFFER_CAP = 1000000000;
+  // DATA_BUFFER_CAP = 1000000000;
+  // FILE_BUFFER_SEGMENTS = 5;
+  // threads_to_use = 1;
   
   IN = NULL;
 }
