@@ -21,7 +21,7 @@ get_function_from_pkg <- function(pkg, fun) {
 test_example <- function(...) {
   pkg <- 'ParaBAMExample'
   load_my_example_pkg(pkg, ...)
-  fun <- get_function_from_pkg(pkg, 'test_ParaBAM')
+  fun <- get_function_from_pkg(pkg, 'idxstats_pbam')
   
   bam <- system.file(file.path('extdata', 'THP1.bam'), package = 'ParaBAM')
   

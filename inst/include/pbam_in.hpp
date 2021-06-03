@@ -1,68 +1,152 @@
-#include "ParaBAM.h"
-#include "Rcpp.h"
-using namespace Rcpp;
+#ifndef _pbam_in
+#define _pbam_in
 
-static const int bamGzipHeadLength = 16;  // +2 a uint16 with the full block length.
-static const char bamGzipHead[bamGzipHeadLength+1] = 
-		"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00\x42\x43\x02\x00";
-static const int bamEOFlength = 28;
-static const char bamEOF[bamEOFlength+1] =
-		"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00\x42\x43\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+class pbam_in {
+  private:
+// pbam_in settings
+    size_t FILE_BUFFER_CAP = 100000000;     // 1e8
+    size_t DATA_BUFFER_CAP = 1000000000;    // 1e9
+    unsigned int FILE_BUFFER_SEGMENTS = 5;  // Divide file buffer into n segments
+    unsigned int threads_to_use = 1;
+  
+// File particulars
+    std::istream * IN;    
+    size_t IS_LENGTH;     // size of BAM file (Input Stream Length)
+  
+    // Header storage:
+    char * magic_header;  // Always of size = 8
+    uint32_t l_text;      // sizeof *headertext
+    char * headertext;
+    uint32_t n_ref;
+    std::vector<std::string> chr_names;
+    std::vector<uint32_t> chr_lens;
+  
+    // Data buffers
+    char * file_buf; size_t file_buf_cap; size_t file_buf_cursor;
+    char * next_file_buf; size_t next_file_buf_cap;
+    
+    char * data_buf; size_t data_buf_cap; size_t data_buf_cursor;
+    
+    std::vector<char *> read_ptrs;              // Raw char pointers to data_buf
+    std::vector<uint32_t> read_ptr_partitions;  // std::maximum read # for threads 0 to i-1
+    std::vector<uint32_t> read_cursors;         // Read # to be returned @ next call to supplyRead
 
-static const int magiclength = 4;
-static const char magicstring[magiclength+1] = "\x42\x41\x4d\x01";
+    void initialize_buffers();
+    void clear_buffers();
 
-ParaBAM::ParaBAM() {
+    int swap_file_buffer_if_needed();
+    size_t load_from_file(size_t n_bytes);
+    size_t fill_file_buffer();
+
+    unsigned int calculate_chunks_to_load_to_secondary_buffer();
+    size_t read_file_chunk_to_spare_buffer(size_t n_bytes);
+
+    size_t decompress(size_t n_bytes_to_decompress);
+    
+    
+    int clean_data_buffer(size_t n_bytes_to_decompress);
+
+    // Only for reading header
+    unsigned int read(char * dest, unsigned int len);  // returns the number of bytes actually read
+    unsigned int ignore(unsigned int len);
+    unsigned int peek(char * dest, unsigned int len) ;
+
+    // Convenience functions
+    size_t tellg() {return((size_t)IN->tellg());};
+    bool eof() {return(IS_LENGTH == tellg());};
+    bool fail() {return(IN->fail());};
+    
+    // Disable copy construction / assignment:
+    pbam_in(const pbam_in &t);
+    pbam_in & operator = (const pbam_in &t);
+  public:
+    pbam_in();
+    pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int file_buffer_segments);
+    ~pbam_in();
+
+    int SetInputHandle(std::istream *in_stream, unsigned int n_threads); // opens file stream, checks EOF and file size
+    int readHeader();
+    int obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens);
+
+    size_t GetLength() { return(IS_LENGTH); };
+
+    int fillReads();  // Returns 1 if no more reads available
+    
+    // Read functions:
+    pbam1_t supplyRead(unsigned int thread_number = 0);
+};
+
+// Functions
+
+void pbam_in::initialize_buffers() {
   file_buf = NULL;
   data_buf = NULL;
   next_file_buf = NULL;
   file_buf_cap = 0; file_buf_cursor = 0;
   data_buf_cap = 0; data_buf_cursor = 0;
   next_file_buf_cap = 0;
-  paraBAM_n_threads = 1;
   magic_header = NULL; l_text = 0; headertext = NULL; n_ref = 0;
-  
+  chr_names.resize(0); chr_lens.resize(0);
+
   read_ptrs.resize(0);
   read_ptr_partitions.resize(0);
   read_cursors.resize(0);
   
-  magic_header = NULL;
-  l_text = 0;
-  headertext = NULL;
-  n_ref = 0;
-  chr_names.resize(0);
-  chr_lens.resize(0);
-  
+  IN = NULL;
 }
 
-ParaBAM::ParaBAM(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int file_buffer_segments) {
+void pbam_in::clear_buffers() {
+  if(file_buf) free(file_buf); 
   file_buf = NULL;
+  if(data_buf) free(data_buf); 
   data_buf = NULL;
+  if(next_file_buf) free(next_file_buf); 
+  next_file_buf = NULL;
+
+  if(magic_header) free(magic_header); 
+  magic_header = NULL;
+  if(headertext) free(headertext); 
+  headertext = NULL;
+  
   next_file_buf = NULL;
   file_buf_cap = 0; file_buf_cursor = 0;
   data_buf_cap = 0; data_buf_cursor = 0;
   next_file_buf_cap = 0;
-  paraBAM_n_threads = 1;
   magic_header = NULL; l_text = 0; headertext = NULL; n_ref = 0;
-  
+  chr_names.resize(0); chr_lens.resize(0);
+
   read_ptrs.resize(0);
   read_ptr_partitions.resize(0);
   read_cursors.resize(0);
   
-  magic_header = NULL;
-  l_text = 0;
-  headertext = NULL;
-  n_ref = 0;
-  chr_names.resize(0);
-  chr_lens.resize(0);
+  IN = NULL;
+}
+
+pbam_in::pbam_in() {
+  // Initialize buffers
+  initialize_buffers();
+  // Settings reset
+  FILE_BUFFER_CAP = 100000000;
+  DATA_BUFFER_CAP = 1000000000;
+  FILE_BUFFER_SEGMENTS = 5;
+  threads_to_use = 1;
+  
+  IN = NULL;
+}
+
+pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int file_buffer_segments) {
+  // Initialize buffers
+  initialize_buffers();
   
   FILE_BUFFER_CAP = file_buffer_cap;
   DATA_BUFFER_CAP = data_buffer_cap;
   FILE_BUFFER_SEGMENTS = file_buffer_segments;
-  // TODO: sanity checks for these parameters
+  threads_to_use = 1;
+  
+  IN = NULL;  
 }
 
-ParaBAM::~ParaBAM() {
+pbam_in::~pbam_in() {
   if(file_buf) free(file_buf); 
   file_buf = NULL;
   if(data_buf) free(data_buf); 
@@ -76,15 +160,15 @@ ParaBAM::~ParaBAM() {
   headertext = NULL;
 }
 
-int ParaBAM::SetInputHandle(std::istream *in_stream, unsigned int n_threads_to_use) {
+int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threads) {
   #ifdef _OPENMP
-    if(n_threads_to_use > (unsigned int)omp_get_max_threads()) {
-      paraBAM_n_threads = (unsigned int)omp_get_max_threads();
+    if(n_threads > (unsigned int)omp_get_max_threads()) {
+      threads_to_use = (unsigned int)omp_get_max_threads();
     } else {
-      paraBAM_n_threads = n_threads_to_use;
+      threads_to_use = n_threads;
     }
   #else
-    paraBAM_n_threads = 1;
+    threads_to_use = 1;
   #endif
   
   IN = in_stream;
@@ -105,12 +189,19 @@ int ParaBAM::SetInputHandle(std::istream *in_stream, unsigned int n_threads_to_u
   }
   IN->clear(); 
   IN->seekg(0, std::ios_base::beg);
-  return(0);
+  
+  // Read header. If corrupt header, close everything and output error:
+  int ret = readHeader();
+  if(ret != 0) {
+    clear_buffers();
+  }
+  return(ret);
 }
 
-int ParaBAM::swap_file_buffer_if_needed() {
+int pbam_in::swap_file_buffer_if_needed() {
   // Transfers residual data from current file buffer to the next:
   Rcout << "swap_file_buffer_if_needed()\n";
+  if(next_file_buf_cap == 0) return(1);
   size_t chunk_size = (size_t)(FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS);
   if(FILE_BUFFER_CAP - chunk_size > file_buf_cursor) return(1);
   
@@ -126,28 +217,24 @@ int ParaBAM::swap_file_buffer_if_needed() {
     file_buf = (char*)realloc(file_tmp = file_buf, FILE_BUFFER_CAP + 1);
     memcpy(file_buf, residual_data_buffer, residual);
     free(residual_data_buffer);
-
   } else {
     // residual == 0
     file_buf = (char*)realloc(file_tmp = file_buf, FILE_BUFFER_CAP + 1);
   }
+  
+  file_buf_cap = residual;
+  file_buf_cursor = 0;
+  
+  if(next_file_buf_cap <= FILE_BUFFER_CAP - file_buf_cap) {
+    memcpy(file_buf + file_buf_cap, next_file_buf, next_file_buf_cap);
+    file_buf_cap += next_file_buf_cap;
 
-  // Transfers any data from next_file_buf to file_buf:
-  // if(residual + next_file_buf_cap > FILE_BUFFER_CAP) {
-    // file_buf = (char*)realloc(file_tmp = file_buf, residual + next_file_buf_cap + 1);
-  // }
-  if(next_file_buf_cap <= FILE_BUFFER_CAP - residual) {
-    memcpy(file_buf + residual, next_file_buf, next_file_buf_cap);
-    file_buf_cap = residual + next_file_buf_cap;
-    file_buf_cursor = 0;
-    
-    free(next_file_buf);
+    free(next_file_buf); next_file_buf = NULL;
     next_file_buf_cap = 0;
   } else {
-    memcpy(file_buf + residual, next_file_buf, FILE_BUFFER_CAP - residual);
+    memcpy(file_buf + file_buf_cap, next_file_buf, FILE_BUFFER_CAP - file_buf_cap);
     file_buf_cap = FILE_BUFFER_CAP;
-    file_buf_cursor = 0;
-    
+
     // Move data around in secondary buffer:
     size_t residual2 = next_file_buf_cap - (FILE_BUFFER_CAP - residual);
     
@@ -163,7 +250,7 @@ int ParaBAM::swap_file_buffer_if_needed() {
 }
 
 
-size_t ParaBAM::load_from_file(size_t n_bytes) {
+size_t pbam_in::load_from_file(size_t n_bytes) {
   /*  
     Read from file to fill n_bytes of file_buf
     First removes data upstream of file cursor
@@ -174,12 +261,8 @@ size_t ParaBAM::load_from_file(size_t n_bytes) {
   char * residual_data_buffer;
   size_t residual = file_buf_cap-file_buf_cursor;
   // Rcout << "Residual = " << residual << '\n';
-  size_t n_bytes_to_load = max(n_bytes, residual);
-  n_bytes_to_load = min(n_bytes_to_load, FILE_BUFFER_CAP);  // Cap at file buffer
-  
-  size_t n_bytes_to_read = n_bytes_to_load - residual;
-  size_t n_bytes_remaining = IS_LENGTH - IN->tellg();
-  if(n_bytes_to_read > n_bytes_remaining) n_bytes_to_read = n_bytes_remaining;
+  size_t n_bytes_to_load =  std::min( std::max(n_bytes, residual) , FILE_BUFFER_CAP);  // Cap at file buffer
+  size_t n_bytes_to_read = std::min(n_bytes_to_load - residual, IS_LENGTH - IN->tellg());
   if(n_bytes_to_read == 0) return(0);
   
   // Remove residual bytes to beginning of buffer:
@@ -204,7 +287,11 @@ size_t ParaBAM::load_from_file(size_t n_bytes) {
   return(n_bytes_to_read);
 }
 
-unsigned int ParaBAM::calculate_chunks_to_load_to_secondary_buffer() {
+size_t pbam_in::fill_file_buffer() {
+  return(load_from_file(FILE_BUFFER_CAP));
+}
+
+unsigned int pbam_in::calculate_chunks_to_load_to_secondary_buffer() {
   size_t chunk_size = (size_t)(FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS);
   unsigned int n_chunks_to_fetch = (file_buf_cursor / chunk_size) + 1;
   unsigned int n_chunks_avail = (next_file_buf_cap / chunk_size);
@@ -212,43 +299,45 @@ unsigned int ParaBAM::calculate_chunks_to_load_to_secondary_buffer() {
   return(n_chunks_to_fetch - n_chunks_avail);
 }
 
-size_t ParaBAM::read_file_chunk_to_spare_buffer(size_t n_bytes) {
+size_t pbam_in::read_file_chunk_to_spare_buffer(size_t n_bytes) {
   // Read from file to fill n_bytes of next_file_buf
   if(n_bytes <= next_file_buf_cap) return(0);
   if(FILE_BUFFER_CAP <= next_file_buf_cap) return(0);
   
-  size_t n_bytes_to_read = max(n_bytes, FILE_BUFFER_CAP) - next_file_buf_cap;
-  size_t n_bytes_remaining = IS_LENGTH - IN->tellg();
+  size_t n_bytes_to_load =  std::min( std::max(n_bytes, next_file_buf_cap) , FILE_BUFFER_CAP);  // Cap at file buffer
+  size_t n_bytes_to_read = std::min(n_bytes_to_load - next_file_buf_cap, IS_LENGTH - IN->tellg());  
 
-  if(n_bytes_to_read > n_bytes_remaining) n_bytes_to_read = n_bytes_remaining;
+  if(n_bytes_to_read == 0) return(0);
+  
+  char * file_tmp;
+  if(next_file_buf_cap == 0) {
+    next_file_buf = (char*)realloc(file_tmp = next_file_buf, FILE_BUFFER_CAP + 1);
+  }
   
   IN->read(next_file_buf + next_file_buf_cap, n_bytes_to_read);
   next_file_buf_cap += n_bytes_to_read;
   return(n_bytes_to_read);
 }
 
-int ParaBAM::clean_data_buffer(size_t n_bytes_to_decompress) {
+int pbam_in::clean_data_buffer(size_t n_bytes_to_decompress) {
   // Remove residual bytes to beginning of buffer:
   // Rcout << "clean_data_buffer\n";
-  char * data_tmp = data_buf;
+  char * data_tmp;
   char * temp_buffer;
   size_t residual = data_buf_cap-data_buf_cursor;
   
   if(residual > 0) {
     // have to move bytes around
-
     temp_buffer = (char*)malloc(residual + 1);
     memcpy(temp_buffer, data_buf + data_buf_cursor, residual);
   
-    data_buf = (char*)realloc(data_tmp, max(n_bytes_to_decompress + 1, residual + 1));
+    data_buf = (char*)realloc(data_tmp = data_buf, std::max(n_bytes_to_decompress + 1, residual + 1));
     memcpy(data_buf, temp_buffer, residual);
     free(temp_buffer);
     
     data_buf_cap = residual;
-
   } else {
-
-    data_buf = (char*)realloc(data_tmp, n_bytes_to_decompress + 1);
+    data_buf = (char*)realloc(data_tmp = data_buf, n_bytes_to_decompress + 1);
     data_buf_cap = 0;
   }
   data_buf_cursor = 0;
@@ -256,7 +345,7 @@ int ParaBAM::clean_data_buffer(size_t n_bytes_to_decompress) {
   return(0);
 }
 
-size_t ParaBAM::decompress(size_t n_bytes_to_decompress) {
+size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
 /*
   Wipes all data behind data_buf_cursor
   If file_buf data remaining is below residual (FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS)
@@ -267,29 +356,28 @@ size_t ParaBAM::decompress(size_t n_bytes_to_decompress) {
 */
   // Rcout << "decompress\n";
   clean_data_buffer(n_bytes_to_decompress);
-  size_t decomp_cursor = data_buf_cap;  // The cursor to the data buffer to begin adding data
-  size_t max_bytes_to_decompress = n_bytes_to_decompress - decomp_cursor;
-  max_bytes_to_decompress = min(max_bytes_to_decompress, DATA_BUFFER_CAP);
+  if(n_bytes_to_decompress < data_buf_cap) return(0);
   
+  size_t decomp_cursor = data_buf_cap;  // The cursor to the data buffer to begin adding data
+  size_t max_bytes_to_decompress = std::min(n_bytes_to_decompress, DATA_BUFFER_CAP) - decomp_cursor;
   // Rcout << "data_buf_cap " << data_buf_cap << " n_bytes_to_decompress " << n_bytes_to_decompress << "\n";
-  if(data_buf_cap >= n_bytes_to_decompress) return(0);
 
 // Check if file buffer needs filling
   unsigned int n_chunks_to_load = 0;
   size_t spare_bytes_to_fill = 0;
   size_t chunk_size = (size_t)(FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS);
-  if(!IN->eof()) {
+  if(!eof()) {
     // If asking to decompress a large amount of data:
-
     if(next_file_buf_cap == 0) {
       // If secondary buffer is not yet in play, fill primary buffer first:
       load_from_file(max_bytes_to_decompress);
       if(max_bytes_to_decompress > FILE_BUFFER_CAP) {
         // Ask to load secondary buffer from file
+        // Note that spare buffer is never filled unless bytes_to_decompress > FILE_BUFFER_CAP
         n_chunks_to_load = calculate_chunks_to_load_to_secondary_buffer();
       }
     } else if(next_file_buf_cap > 0) {
-      // Checks if need to swap file buffer 
+      // Checks if need to swap file buffer
       swap_file_buffer_if_needed();
       n_chunks_to_load = calculate_chunks_to_load_to_secondary_buffer();
     }
@@ -343,7 +431,7 @@ size_t ParaBAM::decompress(size_t n_bytes_to_decompress) {
   }
 
   if(check_gzip_head) {
-    Rcout << "Gzip header corrupt\n";
+    Rcout << "BGZF blocks corrupt\n";
     return(0);
   }
   
@@ -351,7 +439,7 @@ size_t ParaBAM::decompress(size_t n_bytes_to_decompress) {
   src_bgzf_pos.push_back(file_buf_cursor + src_cursor);   
   dest_bgzf_pos.push_back(decomp_cursor + dest_cursor);
   
-  unsigned int decomp_threads = paraBAM_n_threads;
+  unsigned int decomp_threads = threads_to_use;
   if(spare_bytes_to_fill > 0) {
     if(decomp_threads > 1) {
         decomp_threads--;
@@ -377,15 +465,14 @@ size_t ParaBAM::decompress(size_t n_bytes_to_decompress) {
   #ifdef _OPENMP
   #pragma omp parallel for
   #endif
-  for(unsigned int k = 0; k < paraBAM_n_threads; k++) {
+  for(unsigned int k = 0; k < threads_to_use; k++) {
     if(k == decomp_threads) {
-      // as decomp_threads == paraBAM_n_threads - 1 iff spare_bytes_to_fill > 0
+      // as decomp_threads == threads_to_use - 1 iff spare_bytes_to_fill > 0
       
       // Last thread is used to prime spare file buffer
       read_file_chunk_to_spare_buffer(spare_bytes_to_fill);
       spare_bytes_to_fill = 0;
     } else {
-
       unsigned int i = thrd_partitions.at(k);
 
       size_t thread_src_cursor = 0;
@@ -464,9 +551,13 @@ size_t ParaBAM::decompress(size_t n_bytes_to_decompress) {
   return(dest_cursor);
 }
 
-unsigned int ParaBAM::read(char * dest, unsigned int len) {
+unsigned int pbam_in::read(char * dest, unsigned int len) {
   // Reads bytes from the current data_buf, increments data_buff_cursor
-  unsigned int n_bytes_to_read = min((size_t)len, data_buf_cap - data_buf_cursor);
+  if(data_buf_cap - data_buf_cursor < len) {
+    decompress(len + 65536);
+  }
+  
+  unsigned int n_bytes_to_read = std::min((size_t)len, data_buf_cap - data_buf_cursor);
   if(n_bytes_to_read == 0) return(0);
   // Rcout << n_bytes_to_read << '\n';
   memcpy(dest, data_buf + data_buf_cursor, n_bytes_to_read);
@@ -474,39 +565,48 @@ unsigned int ParaBAM::read(char * dest, unsigned int len) {
   return(n_bytes_to_read); 
 }
 
-unsigned int ParaBAM::ignore(unsigned int len) {
+unsigned int pbam_in::ignore(unsigned int len) {
   // Ignores bytes from the current data_buf, increments data_buff_cursor
-  unsigned int n_bytes_to_read = min((size_t)len, data_buf_cap - data_buf_cursor);
+  if(data_buf_cap - data_buf_cursor < len) {
+    decompress(len + 65536);
+  }
+  
+  unsigned int n_bytes_to_read = std::min((size_t)len, data_buf_cap - data_buf_cursor);
   if(n_bytes_to_read == 0) return(0);
   // memcpy(dest, data_buf + data_buf_cursor, n_bytes_to_read);
   data_buf_cursor += n_bytes_to_read;
   return(n_bytes_to_read); 
 }
 
-unsigned int ParaBAM::peek(char * dest, unsigned int len) {
+unsigned int pbam_in::peek(char * dest, unsigned int len) {
   // Peeks at bytes from the current data_buf, does not increment data_buff_cursor
-  unsigned int n_bytes_to_read = min((size_t)len, data_buf_cap - data_buf_cursor);
+  if(data_buf_cap - data_buf_cursor < len) {
+    decompress(len + 65536);
+  }
+  
+  unsigned int n_bytes_to_read = std::min((size_t)len, data_buf_cap - data_buf_cursor);
   if(n_bytes_to_read == 0) return(0);
   memcpy(dest, data_buf + data_buf_cursor, n_bytes_to_read);
   // data_buf_cursor += n_bytes_to_read;
   return(n_bytes_to_read); 
 }
 
-int ParaBAM::readHeader() {
-  // Read 1 Mb from file:
-  decompress(1000000);
-
+int pbam_in::readHeader() {
+  if(magic_header) {
+    Rcout << "Header is already read\n";
+    return(-1);
+  }
+  
   magic_header = (char*)malloc(8+1);
   read(magic_header, 8);
   if(strncmp(magic_header, magicstring, 4) != 0) {
     Rcout << "Invalid BAM magic string\n";
+    free(magic_header); magic_header = NULL;
     return(-1);
   }
+  
   uint32_t * u32 = (uint32_t *)(magic_header + 4);
   l_text = *u32;
-  if(l_text > 1000000) {
-    decompress(l_text); // decompress just enough to read header
-  }
   headertext = (char*)malloc(l_text + 1);
   read(headertext, l_text);
   
@@ -519,7 +619,7 @@ int ParaBAM::readHeader() {
   for(unsigned int i = 0; i < n_ref; i++) {
     read(u32c, 4); u32 = (uint32_t *)u32c;
     read(chrom_buffer, *u32);
-    chrName = string(chrom_buffer, *u32-1);
+    chrName = std::string(chrom_buffer, *u32-1);
     chr_names.push_back(chrName);
     // Rcout << " chr_names " << chrName << '\n';
     read(u32c, 4); u32 = (uint32_t *)u32c;
@@ -527,14 +627,17 @@ int ParaBAM::readHeader() {
   }
   
   free(u32c);
-  // We should be at end of reads.
   return(0);
 }
 
-int ParaBAM::obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens) {
+int pbam_in::obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens) {
+  if(!magic_header) {
+    Rcout << "Header is not yet read\n";
+    return(-1);
+  }
   if(n_ref == 0) {
-    Rcout << "No chromosome names stored. Is ParaBAM::readHeader() been run yet?\n";
-    return(0);
+    Rcout << "No chromosome names stored. Is pbam_in::readHeader() been run yet?\n";
+    return(-1);
   }
   s_chr_names.clear();
   u32_chr_lens.clear();
@@ -542,17 +645,21 @@ int ParaBAM::obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint
     s_chr_names.push_back(chr_names.at(i));
     u32_chr_lens.push_back(chr_lens.at(i));
   }
-  return(n_ref);
+  return((int)n_ref);
 }
 
-int ParaBAM::fillReads() {
+int pbam_in::fillReads() {
   // Returns -1 if error, and 1 if EOF. Otherwise, returns 0
 
   // If header not read:
-  if(chr_names.size() == 0) {
-    Rcout << "Header has not been read\n";
+  if(!magic_header) {
+    Rcout << "Header is not yet read\n";
     return(-1);
-  } 
+  }
+  if(n_ref == 0) {
+    Rcout << "No chromosome names stored. Is pbam_in::readHeader() been run yet?\n";
+    return(-1);
+  }
   
   // Check if previous reads are all read:
   if(read_cursors.size() > 0) {
@@ -591,9 +698,9 @@ int ParaBAM::fillReads() {
   }
   
   // Partition reads by number of threads
-  unsigned int reads_per_thread = 1 + (read_ptrs.size() / paraBAM_n_threads);
+  unsigned int reads_per_thread = 1 + (read_ptrs.size() / threads_to_use);
   unsigned int cursor = 0;
-  while(read_cursors.size() < paraBAM_n_threads) {
+  while(read_cursors.size() < threads_to_use) {
     read_cursors.push_back(cursor);
     cursor += reads_per_thread;
     if(cursor > read_ptrs.size()) cursor = read_ptrs.size();
@@ -602,39 +709,19 @@ int ParaBAM::fillReads() {
   return(0);
 }
 
-char * ParaBAM::supplyRead(unsigned int thread_number) {
+pbam1_t pbam_in::supplyRead(unsigned int thread_number) {
+  pbam1_t read;
   if(thread_number > read_cursors.size()) {
     Rcout << "Invalid thread number parsed to supplyRead()\n";
-    return(NULL);
+    return(read);
   }
   if(read_cursors.at(thread_number) == read_ptr_partitions.at(thread_number)) {
-    return(NULL);
+    return(read);
   }
-  char * read = read_ptrs.at(read_cursors.at(thread_number));
+  read = pbam1_t(read_ptrs.at(read_cursors.at(thread_number)), false);
   read_cursors.at(thread_number)++;
-  
   return(read);
 }
 
-pbam_core_32 * ParaBAM::readCore(char * read) {
-  pbam_core_32 *core = (pbam_core_32*)(read + 4);
-  return(core);
-}
 
-char * ParaBAM::readName(char * read, uint8_t & len) {
-  if(!read) return(NULL);
-  pbam_core_32 * core = (pbam_core_32 *)(read + 4);
-  
-  len = core->l_read_name;
-  char *read_name = (char*)(read + 36);
-  return(read_name);
-}
-
-uint32_t * ParaBAM::readCigar(char * read, uint16_t & len) {
-  if(!read) return(NULL);
-  pbam_core_32 * core = (pbam_core_32 *)(read + 4);
-  
-  len = core->n_cigar_op;
-  uint32_t * cigar = (uint32_t*)(read + 36 + core->l_read_name);
-  return(cigar);
-}
+#endif
