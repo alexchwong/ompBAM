@@ -397,6 +397,11 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
 
   // Profile the file and increment until the destination buffer is reached
   unsigned int bgzf_count = 0;
+  Rcout << "file_buf_cursor = " << file_buf_cursor <<
+    " file_buf_cap = " << file_buf_cap <<
+    " next_file_buf_cap = " << next_file_buf_cap <<
+    " data_buf_cap = " << data_buf_cap << 
+    " data_buf_cursor = " << data_buf_cursor << '\n';
   while(1) {
     // Abort if cannot read smallest possible bgzf block:
     if(file_buf_cursor + src_cursor + 28 > file_buf_cap) break;
@@ -550,7 +555,7 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
   file_buf_cursor = src_bgzf_pos.at(src_bgzf_pos.size() - 1);
   data_buf_cap = dest_bgzf_pos.at(dest_bgzf_pos.size() - 1);
   Rcout << "file_buf_cursor = " << file_buf_cursor << '\n';
-  Rcout << "decompress() done\tellg() = " << tellg() << '\n';
+  Rcout << "decompress() done\ttellg() = " << tellg() << '\n';
   return(dest_cursor);
 }
 
