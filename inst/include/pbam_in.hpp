@@ -203,7 +203,7 @@ int pbam_in::swap_file_buffer_if_needed() {
   Rcout << "swap_file_buffer_if_needed()\n";
   if(next_file_buf_cap == 0) return(1);
   size_t chunk_size = (size_t)(FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS);
-  if(FILE_BUFFER_CAP - chunk_size > file_buf_cursor) return(1);
+  if(file_buf_cap  - file_buf_cursor > chunk_size) return(1);
   
   char * file_tmp;
   char * residual_data_buffer;
