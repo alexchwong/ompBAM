@@ -1,4 +1,4 @@
-
+#' @export
 install_ParaBAM_example <- function(pkg = "ParaBAMExample") {
     from <- system.file(file.path('examples', pkg), package = 'ParaBAM')
     if(!dir.exists(from)) {
@@ -9,5 +9,5 @@ install_ParaBAM_example <- function(pkg = "ParaBAMExample") {
     file.copy(from, dir, recursive = TRUE)
     path <- file.path(dir, pkg)
 
-    devtools::load_all(path, quiet = TRUE, ...)
+    devtools::load_all(path, quiet = TRUE)
 }

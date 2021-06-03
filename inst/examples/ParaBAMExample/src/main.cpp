@@ -1,5 +1,5 @@
-#include "ParaBAM.h"
 // [[Rcpp::depends(ParaBAM)]]
+#include "ParaBAM.hpp"
 
 #include "Rcpp.h"
 using namespace Rcpp;
@@ -7,57 +7,64 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1){
 
+  unsigned int n_threads_to_really_use;
+  #ifdef _OPENMP
+    n_threads_to_really_use = std::max(n_threads_to_use, 1);
+  #else
+    n_threads_to_really_use = 1;
+  #endif
+
   std::ifstream inbam_stream;   
   inbam_stream.open(bam_file, std::ios::in | std::ios::binary);
 
-  ParaBAM inbam;
-  inbam.SetInputHandle(&inbam_stream, (unsigned int)n_threads_to_use);
-  
-  inbam.readHeader();
+  pbam_in inbam;
+  inbam.SetInputHandle(&inbam_stream, n_threads_to_really_use);
   
   std::vector<std::string> s_chr_names;
   std::vector<uint32_t> u32_chr_lens;
   int ret = inbam.obtainChrs(s_chr_names, u32_chr_lens);
+
+  if(ret <= 0) {
+    return(-1); // obtainChrs and SetInputHandle already returns relevant error msgs
+  }
   
+  // Creates a data structure that stores per-chromosome read counts
   std::vector<uint32_t> total_reads(ret);
 
   while(0 == inbam.fillReads()) {
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-    for(unsigned int i = 0; i < (unsigned int)n_threads_to_use; i++) {
-      std::vector<uint32_t> read_counter = 0;
-      char * read;
+    for(unsigned int i = 0; i < n_threads_to_really_use; i++) {
+      std::vector<uint32_t> read_counter(ret);
+      pbam1_t read;
       do {
         read = inbam.supplyRead(i);
-        if(read) {
-          
-          read_counter++;
-
-          // Prints the read names of first 10 reads of each thread
-          if(read_counter <= 10) {
-            uint8_t l_read_name;
-            char * read_name = inbam.readName(read, l_read_name);
-            std::string s_read_name(read_name, l_read_name);
-            
-            #ifdef _OPENMP
-            #pragma omp critical
-            #endif
-            Rcout << "thread " << i << " read " << s_read_name << '\n';
+        if(read.validate()) {
+          if(read.refID() >= 0) {
+            read_counter.at(read.refID())++;
           }
-
         }
-      } while(read);
+        
+        read = inbam.supplyRead(i);
+      } while(read.validate());
     
+      // Summarise reads:
       #ifdef _OPENMP
       #pragma omp critical
       #endif
-      total_reads += read_counter;
+      for(unsigned int j = 0; j < (unsigned int)ret; j++) {
+        total_reads.at(j) += read_counter.at(j);
+      }
     }
   }
 
   inbam_stream.close();
 
-  Rcout << "Total reads = " << total_reads << '\n';
+  Rcout << bam_file << " summary:\n" << "Name\tLength\tNumber of reads\n";
+  for(unsigned int j = 0; j < (unsigned int)ret; j++) {
+    Rcout << s_chr_names.at(j) << '\t' << u32_chr_lens.at(j) << '\t'
+      << total_reads.at(j) << '\n';
+  }
   return(0);
 }
