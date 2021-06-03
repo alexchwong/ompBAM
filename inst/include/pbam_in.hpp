@@ -371,7 +371,7 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     if(next_file_buf_cap == 0) {
       // If secondary buffer is not yet in play, fill primary buffer first:
       load_from_file(max_bytes_to_decompress);
-      if(max_bytes_to_decompress > FILE_BUFFER_CAP) {
+      if(max_bytes_to_decompress > chunk_size) {
         // Ask to load secondary buffer from file
         // Note that spare buffer is never filled unless bytes_to_decompress > FILE_BUFFER_CAP
         n_chunks_to_load = calculate_chunks_to_load_to_secondary_buffer();
