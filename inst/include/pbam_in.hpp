@@ -542,12 +542,15 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     
   }
   
-  if(error_occurred) return(0);
+  if(error_occurred) {
+    Rcout << "error_occurred\n";
+    return(0);
+  }
   
   file_buf_cursor = src_bgzf_pos.at(src_bgzf_pos.size() - 1);
   data_buf_cap = dest_bgzf_pos.at(dest_bgzf_pos.size() - 1);
-  // Rcout << "file_buf_cursor = " << file_buf_cursor << '\n';
-  // Rcout << "decompress() done\n";
+  Rcout << "file_buf_cursor = " << file_buf_cursor << '\n';
+  Rcout << "decompress() done\tellg() = " << tellg() << '\n';
   return(dest_cursor);
 }
 
@@ -693,7 +696,7 @@ int pbam_in::fillReads() {
   }
 
   if(read_ptrs.size() == 0) {
-    Rcout << "End of buffer reached\n";
+    Rcout << "End of buffer reached\ttellg() = " << tellg() << '\n';
     return(1);
   }
   
