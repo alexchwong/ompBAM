@@ -1,11 +1,14 @@
 // [[Rcpp::depends(ParaBAM)]]
-#include "ParaBAM.hpp"
+#include <ParaBAM.hpp>
+
+// [[Rcpp::depends(RcppProgress)]]
+#include <progress.hpp>
 
 #include "Rcpp.h"
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1){
+int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose = true){
 
   unsigned int n_threads_to_really_use;
   #ifdef _OPENMP
@@ -34,7 +37,11 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1){
   // Creates a data structure that stores per-chromosome read counts
   std::vector<uint32_t> total_reads(ret);
 
+  Progress p(inbam.GetFileSize(), verbose);
+
   while(0 == inbam.fillReads()) {
+    p.increment(inbam.IncProgress());
+    
     #ifdef _OPENMP
     #pragma omp parallel for num_threads(n_threads_to_really_use) schedule(static,1)
     #endif

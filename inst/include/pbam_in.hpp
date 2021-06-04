@@ -56,6 +56,8 @@ class pbam_in {
     bool eof() {return(IS_LENGTH == tellg());};
     bool fail() {return(IN->fail());};
     
+    size_t PROGRESS = 0;    
+    
     // Disable copy construction / assignment:
     pbam_in(const pbam_in &t);
     pbam_in & operator = (const pbam_in &t);
@@ -68,12 +70,21 @@ class pbam_in {
     int readHeader();
     int obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens);
 
-    size_t GetLength() { return(IS_LENGTH); };
+    size_t GetFileSize() { return(IS_LENGTH); };
 
     int fillReads();  // Returns 1 if no more reads available
     
     // Read functions:
     pbam1_t supplyRead(unsigned int thread_number = 0);
+    
+    // Progress functions:
+    size_t GetProgress() {return(tellg());};
+    size_t IncProgress() {
+      size_t INC = tellg() - PROGRESS;
+      PROGRESS = tellg();
+      return(INC);
+    };
+
 };
 
 // Functions
@@ -207,7 +218,7 @@ int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threads) {
 
 int pbam_in::swap_file_buffer_if_needed() {
   // Transfers residual data from current file buffer to the next:
-  Rcout << "swap_file_buffer_if_needed()\n";
+  // Rcout << "swap_file_buffer_if_needed()\n";
   if(next_file_buf_cap == 0) return(1);
   size_t chunk_size = (size_t)(FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS);
   if(file_buf_cap  - file_buf_cursor > chunk_size) return(1);
@@ -409,11 +420,11 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
 
   // Profile the file and increment until the destination buffer is reached
   unsigned int bgzf_count = 0;
-  Rcout << "file_buf_cursor = " << file_buf_cursor <<
-    " file_buf_cap = " << file_buf_cap <<
-    " next_file_buf_cap = " << next_file_buf_cap <<
-    " data_buf_cap = " << data_buf_cap << 
-    " data_buf_cursor = " << data_buf_cursor << '\n';
+  // Rcout << "file_buf_cursor = " << file_buf_cursor <<
+    // " file_buf_cap = " << file_buf_cap <<
+    // " next_file_buf_cap = " << next_file_buf_cap <<
+    // " data_buf_cap = " << data_buf_cap << 
+    // " data_buf_cursor = " << data_buf_cursor << '\n';
   while(src_cursor < chunk_size) {
     // Abort if cannot read smallest possible bgzf block:
     if(file_buf_cursor + src_cursor + 28 > file_buf_cap) break;
@@ -567,8 +578,8 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
   
   file_buf_cursor = src_bgzf_pos.at(src_bgzf_pos.size() - 1);
   data_buf_cap = dest_bgzf_pos.at(dest_bgzf_pos.size() - 1);
-  Rcout << "file_buf_cursor = " << file_buf_cursor << '\n';
-  Rcout << "decompress() done\ttellg() = " << tellg() << '\n';
+  // Rcout << "file_buf_cursor = " << file_buf_cursor << '\n';
+  // Rcout << "decompress() done\ttellg() = " << tellg() << '\n';
   return(dest_cursor);
 }
 
@@ -714,7 +725,7 @@ int pbam_in::fillReads() {
   }
 
   if(read_ptrs.size() == 0) {
-    Rcout << "End of buffer reached\ttellg() = " << tellg() << '\n';
+    // Rcout << "End of buffer reached\ttellg() = " << tellg() << '\n';
     return(1);
   }
   
