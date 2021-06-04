@@ -33,7 +33,7 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1){
 
   while(0 == inbam.fillReads()) {
     #ifdef _OPENMP
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(n_threads_to_really_use) schedule(static,1)
     #endif
     for(unsigned int i = 0; i < n_threads_to_really_use; i++) {
       std::vector<uint32_t> read_counter(ret);
