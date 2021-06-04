@@ -48,14 +48,13 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
     for(unsigned int i = 0; i < n_threads_to_really_use; i++) {
       std::vector<uint32_t> read_counter(ret);
       pbam1_t read;
+      read = inbam.supplyRead(i);
       do {
-        read = inbam.supplyRead(i);
         if(read.validate()) {
           if(read.refID() >= 0) {
             read_counter.at(read.refID())++;
           }
         }
-        
         read = inbam.supplyRead(i);
       } while(read.validate());
     
