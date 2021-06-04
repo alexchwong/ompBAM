@@ -387,12 +387,16 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     } else if(next_file_buf_cap > 0) {
       // Checks if need to swap file buffer
       swap_file_buffer_if_needed();
-      if(file_buf_cap-file_buf_cursor + chunk_size > file_buf_cap - chunk_size) {
+      if(file_buf_cursor + chunk_size > file_buf_cap - chunk_size) {
         spare_bytes_to_fill = FILE_BUFFER_CAP;
       } else {
         spare_bytes_to_fill = file_buf_cursor + chunk_size;
       }
     }
+  } else {
+    // If EOF, only check when buffer needs to be swapped
+    swap_file_buffer_if_needed();
+    spare_bytes_to_fill = 0;
   }
 
   size_t src_cursor = 0;
