@@ -481,7 +481,7 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
   bool error_occurred = false;
   
   #ifdef _OPENMP
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(threads_to_use) schedule(static,1)
   #endif
   for(unsigned int k = 0; k < threads_to_use; k++) {
     if(k == decomp_threads) {
