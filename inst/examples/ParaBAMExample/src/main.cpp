@@ -14,7 +14,9 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1){
     n_threads_to_really_use = 1;
   #endif
 
-  std::ifstream inbam_stream;   
+  // File buffer 1 Gb, Data buffer 2 Gb, 10 file chunks per buffer
+  // Buffer usage = 2 * 1 Gb (File + nextFile buffers) + 2Gb (Data buffer)
+  std::ifstream inbam_stream(1000000000, 2000000000, 10);   
   inbam_stream.open(bam_file, std::ios::in | std::ios::binary);
 
   pbam_in inbam;
