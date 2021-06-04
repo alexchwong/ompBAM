@@ -20,7 +20,7 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1){
 
   // File buffer 1 Gb, Data buffer 2 Gb, 10 file chunks per buffer
   // Buffer usage = 2 * 1 Gb (File + nextFile buffers) + 2Gb (Data buffer)
-  pbam_in inbam(1000000000, 2000000000, 10);
+  pbam_in inbam((size_t)1000000000, (size_t)2000000000, 10);
   inbam.SetInputHandle(&inbam_stream, n_threads_to_really_use);
   
   std::vector<std::string> s_chr_names;
