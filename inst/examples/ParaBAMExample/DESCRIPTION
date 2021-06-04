@@ -8,6 +8,6 @@ Authors@R: c(person("Alex Chit Hei", "Wong", email="a.wong@centenary.org.au",
 Maintainer: Alex Wong <a.wong@centenary.org.au>
 Description: Example use of the ParaBAM package in a package
 License: MIT
-Depends: Rcpp (>= 1.0.5), zlibbioc, ParaBAM
-LinkingTo: Rcpp, zlibbioc, ParaBAM
+Depends: Rcpp (>= 1.0.5), zlibbioc, RcppProgress, ParaBAM
+LinkingTo: Rcpp, zlibbioc, RcppProgress, ParaBAM
 RoxygenNote: 7.1.1

@@ -11,7 +11,7 @@ Depends:
 Imports:
 	Rcpp (>= 1.0.5), zlibbioc, devtools
 Suggests: 
-    knitr, rmarkdown, testthat (>= 3.0.0)
+    RcppProgress, knitr, rmarkdown, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 biocViews: Software, Transcriptomics, RNASeq, 
 SystemRequirements: C++11
