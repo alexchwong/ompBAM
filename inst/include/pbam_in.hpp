@@ -138,12 +138,19 @@ pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int fi
   // Initialize buffers
   initialize_buffers();
   
+  if(file_buffer_cap / file_buffer_segments < 1024576) {
+    Rcout << "FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS (chunk size) must be above 1Mb\n";
+    return;
+  }
+  if(data_buffer_cap < file_buffer_cap) {
+    Rcout << "DATA_BUFFER_CAP must not be smaller than FILE_BUFFER_CAP\n";
+    return;
+  }  
+
   FILE_BUFFER_CAP = file_buffer_cap;
   DATA_BUFFER_CAP = data_buffer_cap;
   FILE_BUFFER_SEGMENTS = file_buffer_segments;
   threads_to_use = 1;
-  
-  IN = NULL;  
 }
 
 pbam_in::~pbam_in() {
@@ -363,27 +370,28 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
   // Rcout << "data_buf_cap " << data_buf_cap << " n_bytes_to_decompress " << n_bytes_to_decompress << "\n";
 
 // Check if file buffer needs filling
-  unsigned int n_chunks_to_load = 0;
   size_t spare_bytes_to_fill = 0;
   size_t chunk_size = (size_t)(FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS);
   if(!eof()) {
     // If asking to decompress a large amount of data:
     if(next_file_buf_cap == 0) {
       // If secondary buffer is not yet in play, fill primary buffer first:
-      load_from_file(max_bytes_to_decompress);
       if(max_bytes_to_decompress > chunk_size) {
-        // Ask to load secondary buffer from file
-        // Note that spare buffer is never filled unless bytes_to_decompress > FILE_BUFFER_CAP
-        n_chunks_to_load = calculate_chunks_to_load_to_secondary_buffer();
+        // Obviously asking to decompress a lot of data. Use full buffer
+        load_from_file(FILE_BUFFER_CAP);
+        spare_bytes_to_fill = chunk_size;
+      } else {
+        // If only asking for small amount of data, do not use full buffer
+        load_from_file(max_bytes_to_decompress);
       }
     } else if(next_file_buf_cap > 0) {
       // Checks if need to swap file buffer
       swap_file_buffer_if_needed();
-      n_chunks_to_load = calculate_chunks_to_load_to_secondary_buffer();
-    }
-    if(n_chunks_to_load > 0) {
-      unsigned int n_chunks_avail = (next_file_buf_cap / chunk_size);
-      spare_bytes_to_fill = chunk_size * (n_chunks_avail + n_chunks_to_load);
+      if(file_buf_cap-file_buf_cursor + chunk_size > file_buf_cap - chunk_size) {
+        spare_bytes_to_fill = FILE_BUFFER_CAP;
+      } else {
+        spare_bytes_to_fill = file_buf_cursor + chunk_size;
+      }
     }
   }
 
@@ -402,7 +410,7 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     " next_file_buf_cap = " << next_file_buf_cap <<
     " data_buf_cap = " << data_buf_cap << 
     " data_buf_cursor = " << data_buf_cursor << '\n';
-  while(1) {
+  while(src_cursor < chunk_size) {
     // Abort if cannot read smallest possible bgzf block:
     if(file_buf_cursor + src_cursor + 28 > file_buf_cap) break;
 
@@ -420,7 +428,8 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     // Abort if cannot read entire bgzf block:
     u16 = (uint16_t*)(file_buf + file_buf_cursor + src_cursor + 16);
     if(file_buf_cursor + src_cursor + (*u16+1) > file_buf_cap) break;
-
+    if(src_cursor + (*u16+1) > chunk_size) break;   // will not read above chunk_size
+    
     // Abort if filling dest with extra data will lead to overflow
     u32 = (uint32_t*)(file_buf + file_buf_cursor + src_cursor + (*u16+1) - 4);
     if(dest_cursor + *u32 > max_bytes_to_decompress) break;
