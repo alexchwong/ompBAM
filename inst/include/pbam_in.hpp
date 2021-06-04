@@ -53,6 +53,11 @@ class pbam_in {
 
     // Convenience functions
     size_t tellg() {return((size_t)IN->tellg());};
+    size_t prog_tellg() {
+      return((size_t)IN->tellg()
+        - (file_buf_cap-file_buf_cursor)
+        - next_file_buf_cap
+    ); };
     bool eof() {return(IS_LENGTH == tellg());};
     bool fail() {return(IN->fail());};
     
@@ -78,10 +83,10 @@ class pbam_in {
     pbam1_t supplyRead(unsigned int thread_number = 0);
     
     // Progress functions:
-    size_t GetProgress() {return(tellg());};
+    size_t GetProgress() {return(prog_tellg());};
     size_t IncProgress() {
-      size_t INC = tellg() - PROGRESS;
-      PROGRESS = tellg();
+      size_t INC = prog_tellg() - PROGRESS;
+      PROGRESS = prog_tellg();
       return(INC);
     };
 
