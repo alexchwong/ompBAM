@@ -85,14 +85,14 @@ class pbam1_t{
 };
 
 // Constructor (empty):
-pbam1_t::pbam1_t() {
+inline pbam1_t::pbam1_t() {
   read_buffer = NULL;
   realized = false;
   core = NULL;
   block_size = 0;
 }
 
-void pbam1_t::reset() {
+inline void pbam1_t::reset() {
   if(read_buffer && realized) {
     free(read_buffer);
     read_buffer = NULL;
@@ -103,7 +103,7 @@ void pbam1_t::reset() {
 }
 
 // Constructor (takes char*, creates virtual read pointing to buffer):
-pbam1_t::pbam1_t(char * src, bool realize) {
+inline pbam1_t::pbam1_t(char * src, bool realize) {
   uint32_t *temp_block_size = (uint32_t *)(src);
   block_size = *temp_block_size;
   if(realize) {
@@ -120,7 +120,7 @@ pbam1_t::pbam1_t(char * src, bool realize) {
 }
 
 // Destructor
-pbam1_t::~pbam1_t() {
+inline pbam1_t::~pbam1_t() {
   if(read_buffer && realized) {
     free(read_buffer);
     read_buffer = NULL;
@@ -130,7 +130,7 @@ pbam1_t::~pbam1_t() {
   block_size = 0;
 }
 
-void pbam1_t::realize() {
+inline void pbam1_t::realize() {
   if(validate() && !realized) {
     char *tmp = read_buffer;
     read_buffer = (char*)malloc(block_size + 1);
@@ -141,7 +141,7 @@ void pbam1_t::realize() {
 }
 
 // copy constructor
-pbam1_t::pbam1_t(const pbam1_t &t) {
+inline pbam1_t::pbam1_t(const pbam1_t &t) {
   if(t.isReal() && t.validate()) {
     read_buffer = (char*)malloc(t.block_size + 1);
     memcpy(read_buffer, t.read_buffer, t.block_size);
@@ -162,7 +162,7 @@ pbam1_t::pbam1_t(const pbam1_t &t) {
 }
 
 // copy assignment operator
-pbam1_t & pbam1_t::operator = (const pbam1_t &t)
+inline pbam1_t & pbam1_t::operator = (const pbam1_t &t)
 {
   // Check for self assignment
   if(this != &t) {
@@ -188,7 +188,7 @@ pbam1_t & pbam1_t::operator = (const pbam1_t &t)
 }
 
 // validate:
-bool pbam1_t::validate() const {
+inline bool pbam1_t::validate() const {
   if(block_size < 36 || !core) {
     return(false);
   }
@@ -209,81 +209,81 @@ bool pbam1_t::validate() const {
   return(true);
 }
 
-int32_t pbam1_t::refID() {
+inline int32_t pbam1_t::refID() {
   if(validate()) {
     return(core->refID);
   }
   return(0);
 }
-int32_t pbam1_t::pos() {
+inline int32_t pbam1_t::pos() {
   if(validate()) {
     return(core->pos);
   }
   return(0);
 }
-uint8_t pbam1_t::l_read_name() {
+inline uint8_t pbam1_t::l_read_name() {
   if(validate()) {
     return(core->l_read_name);
   }
   return(0);
 }
-uint8_t pbam1_t::mapq(){
+inline uint8_t pbam1_t::mapq(){
   if(validate()) {
     return(core->mapq);
   }
   return(0);
 }
-uint16_t pbam1_t::bin(){
+inline uint16_t pbam1_t::bin(){
   if(validate()) {
     return(core->bin);
   }
   return(0);
 }
-uint16_t pbam1_t::n_cigar_op(){
+inline uint16_t pbam1_t::n_cigar_op(){
   if(validate()) {
     return(core->n_cigar_op);
   }
   return(0);
 }
-uint32_t pbam1_t::flag(){
+inline uint32_t pbam1_t::flag(){
   if(validate()) {
     return(core->flag);
   }
   return(0);
 }
-uint32_t pbam1_t::l_seq(){
+inline uint32_t pbam1_t::l_seq(){
   if(validate()) {
     return(core->l_seq);
   }
   return(0);
 }
-int32_t pbam1_t::next_refID(){
+inline int32_t pbam1_t::next_refID(){
   if(validate()) {
     return(core->next_refID);
   }
   return(0);
 }
-int32_t pbam1_t::next_pos(){
+inline int32_t pbam1_t::next_pos(){
   if(validate()) {
     return(core->next_pos);
   }
   return(0);
 }
-int32_t pbam1_t::tlen(){
+inline int32_t pbam1_t::tlen(){
   if(validate()) {
     return(core->tlen);
   }
   return(0);
 }
 
-char * pbam1_t::read_name() {
+inline char * pbam1_t::read_name() {
   if(validate()) {
     return((char*)(read_buffer + 36));
   }
   return(NULL);
 }
 
-uint8_t pbam1_t::read_name(std::string & str) {
+inline uint8_t pbam1_t::read_name(std::string & str) {
   if(validate()) {
     char *tmp = (char*)(read_buffer + 36);
     str.assign(tmp);
@@ -293,14 +293,14 @@ uint8_t pbam1_t::read_name(std::string & str) {
 }
 
 // NB does not yet support long reads where cigar length > 65535
-uint32_t * pbam1_t::cigar() {
+inline uint32_t * pbam1_t::cigar() {
   if(validate()) {
     return((uint32_t*)(read_buffer + 36 + core->l_read_name));
   }
   return(NULL);
 }
 
-uint16_t pbam1_t::cigar(uint32_t* dest) {
+inline uint16_t pbam1_t::cigar(uint32_t* dest) {
   if(validate()) {
     dest = (uint32_t*)malloc(sizeof(uint32_t) * (core->n_cigar_op + 1));
     memcpy(dest, read_buffer + 36 + core->l_read_name, sizeof(uint32_t) * (core->n_cigar_op));
@@ -309,14 +309,14 @@ uint16_t pbam1_t::cigar(uint32_t* dest) {
   return(0);
 }
 
-uint8_t * pbam1_t::seq() {
+inline uint8_t * pbam1_t::seq() {
   if(validate()) {
     return((uint8_t*)(read_buffer + 36 + core->l_read_name + sizeof(uint32_t) * core->n_cigar_op));
   }
   return(NULL);
 }
 
-uint32_t pbam1_t::seq(uint8_t * dest) {
+inline uint32_t pbam1_t::seq(uint8_t * dest) {
   if(validate()) {
     dest = (uint8_t*)malloc(sizeof(uint8_t) * ((core->l_seq + 1) / 2));
     memcpy(dest, read_buffer + 36 + core->l_read_name + sizeof(uint32_t) * core->n_cigar_op, 
@@ -326,7 +326,7 @@ uint32_t pbam1_t::seq(uint8_t * dest) {
   return(0);
 }
 
-void pbam1_t::seq_to_str(uint8_t val, std::string & dest) {
+inline void pbam1_t::seq_to_str(uint8_t val, std::string & dest) {
   switch(val) {
     case 1:
       dest.append("A"); break;
@@ -363,7 +363,7 @@ void pbam1_t::seq_to_str(uint8_t val, std::string & dest) {
   }
 }
 
-int pbam1_t::seq(std::string & dest) {
+inline int pbam1_t::seq(std::string & dest) {
   if(validate()) {
     dest.clear();
     uint8_t *tmp_buffer = (uint8_t *)(read_buffer + 36 + core->l_read_name + sizeof(uint32_t) * core->n_cigar_op);
@@ -384,14 +384,14 @@ int pbam1_t::seq(std::string & dest) {
   return(0);
 }
 
-char * pbam1_t::qual() {
+inline char * pbam1_t::qual() {
   if(validate()) {
     return((char*)(read_buffer + 36 + core->l_read_name + sizeof(uint32_t) * core->n_cigar_op + ((core->l_seq + 1) / 2)));
   }
   return(NULL);
 }
 
-uint32_t pbam1_t::qual(uint8_t * dest) {
+inline uint32_t pbam1_t::qual(uint8_t * dest) {
   if(validate()) {
     dest = (uint8_t*)malloc(core->l_seq);
     memcpy(dest, read_buffer + 36 + core->l_read_name + sizeof(uint32_t) * core->n_cigar_op + ((core->l_seq + 1) / 2),
@@ -402,7 +402,7 @@ uint32_t pbam1_t::qual(uint8_t * dest) {
 }
 
 // TAGS:
-uint32_t pbam1_t::search_tag_pos(const std::string & tag, uint32_t & tag_length) {
+inline uint32_t pbam1_t::search_tag_pos(const std::string & tag, uint32_t & tag_length) {
   char null = '\0';
   uint32_t tag_pos = (36 + 
     core->l_read_name + 
@@ -462,7 +462,7 @@ uint32_t pbam1_t::search_tag_pos(const std::string & tag, uint32_t & tag_length)
   return(tag_pos);
 }
 
-uint32_t pbam1_t::tag_check(const std::string & tag, uint32_t & tag_length, char type) {
+inline uint32_t pbam1_t::tag_check(const std::string & tag, uint32_t & tag_length, char type) {
   uint32_t tag_pos = search_tag_pos(tag, tag_length);
   if(tag_pos >= block_size) return(-1);
   char *tag_type = read_buffer + tag_pos + 2;
@@ -473,7 +473,7 @@ uint32_t pbam1_t::tag_check(const std::string & tag, uint32_t & tag_length, char
 }
 
 
-int pbam1_t::tagVal(const std::string & tag, char * dest) {
+inline int pbam1_t::tagVal(const std::string & tag, char * dest) {
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'a');
@@ -484,7 +484,7 @@ int pbam1_t::tagVal(const std::string & tag, char * dest) {
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, int8_t * dest) {
+inline int pbam1_t::tagVal(const std::string & tag, int8_t * dest) {
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'c');
@@ -495,7 +495,7 @@ int pbam1_t::tagVal(const std::string & tag, int8_t * dest) {
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, uint8_t * dest) {
+inline int pbam1_t::tagVal(const std::string & tag, uint8_t * dest) {
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'C');
@@ -506,7 +506,7 @@ int pbam1_t::tagVal(const std::string & tag, uint8_t * dest) {
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, int16_t * dest) {
+inline int pbam1_t::tagVal(const std::string & tag, int16_t * dest) {
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 's');
@@ -517,7 +517,7 @@ int pbam1_t::tagVal(const std::string & tag, int16_t * dest) {
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, uint16_t * dest) {
+inline int pbam1_t::tagVal(const std::string & tag, uint16_t * dest) {
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'S');
@@ -528,7 +528,7 @@ int pbam1_t::tagVal(const std::string & tag, uint16_t * dest) {
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, int32_t * dest) {
+inline int pbam1_t::tagVal(const std::string & tag, int32_t * dest) {
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'i');
@@ -539,7 +539,7 @@ int pbam1_t::tagVal(const std::string & tag, int32_t * dest) {
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, uint32_t * dest) {
+inline int pbam1_t::tagVal(const std::string & tag, uint32_t * dest) {
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'I');
@@ -550,7 +550,7 @@ int pbam1_t::tagVal(const std::string & tag, uint32_t * dest) {
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, float * dest) {
+inline int pbam1_t::tagVal(const std::string & tag, float * dest) {
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'f');
@@ -561,7 +561,7 @@ int pbam1_t::tagVal(const std::string & tag, float * dest) {
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, std::string & dest) {
+inline int pbam1_t::tagVal(const std::string & tag, std::string & dest) {
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'Z');
@@ -574,7 +574,7 @@ int pbam1_t::tagVal(const std::string & tag, std::string & dest) {
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, std::vector<int8_t> & dest){
+inline int pbam1_t::tagVal(const std::string & tag, std::vector<int8_t> & dest){
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'c');
@@ -598,7 +598,7 @@ int pbam1_t::tagVal(const std::string & tag, std::vector<int8_t> & dest){
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, std::vector<uint8_t> & dest){
+inline int pbam1_t::tagVal(const std::string & tag, std::vector<uint8_t> & dest){
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'C');
@@ -622,7 +622,7 @@ int pbam1_t::tagVal(const std::string & tag, std::vector<uint8_t> & dest){
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, std::vector<int16_t> & dest){
+inline int pbam1_t::tagVal(const std::string & tag, std::vector<int16_t> & dest){
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 's');
@@ -646,7 +646,7 @@ int pbam1_t::tagVal(const std::string & tag, std::vector<int16_t> & dest){
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, std::vector<uint16_t> & dest){
+inline int pbam1_t::tagVal(const std::string & tag, std::vector<uint16_t> & dest){
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'S');
@@ -670,7 +670,7 @@ int pbam1_t::tagVal(const std::string & tag, std::vector<uint16_t> & dest){
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, std::vector<int32_t> & dest){
+inline int pbam1_t::tagVal(const std::string & tag, std::vector<int32_t> & dest){
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'i');
@@ -694,7 +694,7 @@ int pbam1_t::tagVal(const std::string & tag, std::vector<int32_t> & dest){
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, std::vector<uint32_t> & dest){
+inline int pbam1_t::tagVal(const std::string & tag, std::vector<uint32_t> & dest){
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'I');
@@ -718,7 +718,7 @@ int pbam1_t::tagVal(const std::string & tag, std::vector<uint32_t> & dest){
   return(-1);
 }
 
-int pbam1_t::tagVal(const std::string & tag, std::vector<float> & dest){
+inline int pbam1_t::tagVal(const std::string & tag, std::vector<float> & dest){
   if(validate()) {
     uint32_t tag_length;
     uint32_t tag_pos = tag_check(tag, tag_length, 'f');

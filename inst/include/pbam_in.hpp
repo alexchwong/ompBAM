@@ -94,7 +94,7 @@ class pbam_in {
 
 // Functions
 
-void pbam_in::initialize_buffers() {
+inline void pbam_in::initialize_buffers() {
   file_buf = NULL;
   data_buf = NULL;
   next_file_buf = NULL;
@@ -111,7 +111,7 @@ void pbam_in::initialize_buffers() {
   IN = NULL;
 }
 
-void pbam_in::clear_buffers() {
+inline void pbam_in::clear_buffers() {
   if(file_buf) free(file_buf); 
   file_buf = NULL;
   if(data_buf) free(data_buf); 
@@ -138,7 +138,7 @@ void pbam_in::clear_buffers() {
   IN = NULL;
 }
 
-pbam_in::pbam_in() {
+inline pbam_in::pbam_in() {
   // Initialize buffers
   initialize_buffers();
   // Settings reset
@@ -150,7 +150,7 @@ pbam_in::pbam_in() {
   IN = NULL;
 }
 
-pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int file_buffer_segments) {
+inline pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int file_buffer_segments) {
   // Initialize buffers
   initialize_buffers();
   
@@ -169,7 +169,7 @@ pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int fi
   threads_to_use = 1;
 }
 
-pbam_in::~pbam_in() {
+inline pbam_in::~pbam_in() {
   if(file_buf) free(file_buf); 
   file_buf = NULL;
   if(data_buf) free(data_buf); 
@@ -183,7 +183,7 @@ pbam_in::~pbam_in() {
   headertext = NULL;
 }
 
-int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threads) {
+inline int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threads) {
   #ifdef _OPENMP
     if(n_threads > (unsigned int)omp_get_max_threads()) {
       threads_to_use = (unsigned int)omp_get_max_threads();
@@ -221,7 +221,7 @@ int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threads) {
   return(ret);
 }
 
-int pbam_in::swap_file_buffer_if_needed() {
+inline int pbam_in::swap_file_buffer_if_needed() {
   // Transfers residual data from current file buffer to the next:
   // Rcout << "swap_file_buffer_if_needed()\n";
   if(next_file_buf_cap == 0) return(1);
@@ -273,7 +273,7 @@ int pbam_in::swap_file_buffer_if_needed() {
 }
 
 
-size_t pbam_in::load_from_file(size_t n_bytes) {
+inline size_t pbam_in::load_from_file(size_t n_bytes) {
   /*  
     Read from file to fill n_bytes of file_buf
     First removes data upstream of file cursor
@@ -310,11 +310,11 @@ size_t pbam_in::load_from_file(size_t n_bytes) {
   return(n_bytes_to_read);
 }
 
-size_t pbam_in::fill_file_buffer() {
+inline size_t pbam_in::fill_file_buffer() {
   return(load_from_file(FILE_BUFFER_CAP));
 }
 
-unsigned int pbam_in::calculate_chunks_to_load_to_secondary_buffer() {
+inline unsigned int pbam_in::calculate_chunks_to_load_to_secondary_buffer() {
   size_t chunk_size = (size_t)(FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS);
   unsigned int n_chunks_to_fetch = (file_buf_cursor / chunk_size) + 1;
   unsigned int n_chunks_avail = (next_file_buf_cap / chunk_size);
@@ -322,7 +322,7 @@ unsigned int pbam_in::calculate_chunks_to_load_to_secondary_buffer() {
   return(n_chunks_to_fetch - n_chunks_avail);
 }
 
-size_t pbam_in::read_file_chunk_to_spare_buffer(size_t n_bytes) {
+inline size_t pbam_in::read_file_chunk_to_spare_buffer(size_t n_bytes) {
   // Read from file to fill n_bytes of next_file_buf
   if(n_bytes <= next_file_buf_cap) return(0);
   if(FILE_BUFFER_CAP <= next_file_buf_cap) return(0);
@@ -342,7 +342,7 @@ size_t pbam_in::read_file_chunk_to_spare_buffer(size_t n_bytes) {
   return(n_bytes_to_read);
 }
 
-int pbam_in::clean_data_buffer(size_t n_bytes_to_decompress) {
+inline int pbam_in::clean_data_buffer(size_t n_bytes_to_decompress) {
   // Remove residual bytes to beginning of buffer:
   // Rcout << "clean_data_buffer\n";
   char * data_tmp;
@@ -368,7 +368,7 @@ int pbam_in::clean_data_buffer(size_t n_bytes_to_decompress) {
   return(0);
 }
 
-size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
+inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
 /*
   Wipes all data behind data_buf_cursor
   If file_buf data remaining is below residual (FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS)
@@ -588,7 +588,7 @@ size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
   return(dest_cursor);
 }
 
-unsigned int pbam_in::read(char * dest, unsigned int len) {
+inline unsigned int pbam_in::read(char * dest, unsigned int len) {
   // Reads bytes from the current data_buf, increments data_buff_cursor
   if(data_buf_cap - data_buf_cursor < len) {
     decompress(len + 65536);
@@ -602,7 +602,7 @@ unsigned int pbam_in::read(char * dest, unsigned int len) {
   return(n_bytes_to_read); 
 }
 
-unsigned int pbam_in::ignore(unsigned int len) {
+inline unsigned int pbam_in::ignore(unsigned int len) {
   // Ignores bytes from the current data_buf, increments data_buff_cursor
   if(data_buf_cap - data_buf_cursor < len) {
     decompress(len + 65536);
@@ -615,7 +615,7 @@ unsigned int pbam_in::ignore(unsigned int len) {
   return(n_bytes_to_read); 
 }
 
-unsigned int pbam_in::peek(char * dest, unsigned int len) {
+inline unsigned int pbam_in::peek(char * dest, unsigned int len) {
   // Peeks at bytes from the current data_buf, does not increment data_buff_cursor
   if(data_buf_cap - data_buf_cursor < len) {
     decompress(len + 65536);
@@ -628,7 +628,7 @@ unsigned int pbam_in::peek(char * dest, unsigned int len) {
   return(n_bytes_to_read); 
 }
 
-int pbam_in::readHeader() {
+inline int pbam_in::readHeader() {
   if(magic_header) {
     Rcout << "Header is already read\n";
     return(-1);
@@ -667,7 +667,7 @@ int pbam_in::readHeader() {
   return(0);
 }
 
-int pbam_in::obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens) {
+inline int pbam_in::obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens) {
   if(!magic_header) {
     Rcout << "Header is not yet read\n";
     return(-1);
@@ -685,7 +685,7 @@ int pbam_in::obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint
   return((int)n_ref);
 }
 
-int pbam_in::fillReads() {
+inline int pbam_in::fillReads() {
   // Returns -1 if error, and 1 if EOF. Otherwise, returns 0
 
   // If header not read:
@@ -746,7 +746,7 @@ int pbam_in::fillReads() {
   return(0);
 }
 
-pbam1_t pbam_in::supplyRead(unsigned int thread_number) {
+inline pbam1_t pbam_in::supplyRead(unsigned int thread_number) {
   pbam1_t read;
   if(thread_number > read_cursors.size()) {
     Rcout << "Invalid thread number parsed to supplyRead()\n";
