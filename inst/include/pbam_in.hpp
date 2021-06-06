@@ -688,7 +688,7 @@ inline int pbam_in::obtainChrs(std::vector<std::string> & s_chr_names, std::vect
 
 inline int pbam_in::fillReads() {
   // Returns -1 if error, and 1 if EOF. Otherwise, returns 0
-
+  Rcout << "fillReads()\n";
   // If header not read:
   if(!magic_header) {
     Rcout << "Header is not yet read\n";
@@ -730,7 +730,7 @@ inline int pbam_in::fillReads() {
   size_t data_divider = 1 + ((data_buf_cap - data_buf_cursor) / threads_to_use);
   size_t next_divider = std::max(data_buf_cursor + data_divider, data_buf_cap);
   // Iterates through data buffer aand assigns pointers to beginning of reads
-  
+  Rcout << "data_buf_cursor = " << data_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
   // bool has_reads_left_in_buffer = true;
   read_cursors.push_back(data_buf_cursor);
   unsigned int threads_accounted_for = 0;
