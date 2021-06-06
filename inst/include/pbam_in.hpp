@@ -750,6 +750,7 @@ inline int pbam_in::fillReads() {
       read_cursors.push_back(data_buf_cursor);
       next_divider = std::max(data_buf_cap, next_divider + data_divider);
       threads_accounted_for++;
+      Rcout << data_buf_cursor << '\t';
     }
   }
 
@@ -758,9 +759,11 @@ inline int pbam_in::fillReads() {
     read_cursors.push_back(data_buf_cursor);
     next_divider = std::max(data_buf_cap, next_divider + data_divider);
     threads_accounted_for++;
+    Rcout << data_buf_cursor << '\t';
   }
 
   read_ptr_ends.push_back(data_buf_cursor);
+  Rcout << data_buf_cursor << '\n';
   return(0);
 }
 
