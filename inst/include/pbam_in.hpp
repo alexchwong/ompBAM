@@ -728,7 +728,7 @@ inline int pbam_in::fillReads() {
   
   // Roughly divide the buffer into N regions:
   size_t data_divider = 1 + ((data_buf_cap - data_buf_cursor) / threads_to_use);
-  size_t next_divider = std::max(data_buf_cursor + data_divider, data_buf_cap);
+  size_t next_divider = std::min(data_buf_cursor + data_divider, data_buf_cap);
   // Iterates through data buffer aand assigns pointers to beginning of reads
   Rcout << "data_buf_cursor = " << data_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
   // bool has_reads_left_in_buffer = true;
@@ -748,7 +748,7 @@ inline int pbam_in::fillReads() {
     if(data_buf_cursor >= next_divider && threads_accounted_for < threads_to_use - 1) {
       read_ptr_ends.push_back(data_buf_cursor);
       read_cursors.push_back(data_buf_cursor);
-      next_divider = std::max(data_buf_cap, next_divider + data_divider);
+      next_divider = std::min(data_buf_cap, next_divider + data_divider);
       threads_accounted_for++;
       Rcout << data_buf_cursor << '\t';
     }
