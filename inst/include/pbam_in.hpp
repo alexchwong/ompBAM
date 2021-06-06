@@ -715,7 +715,7 @@ inline int pbam_in::fillReads() {
   // read_ptr_partitions.resize(0);
   read_cursors.resize(0);
 
-  read_ptr_begins.resize(0);
+  // read_ptr_begins.resize(0);
   read_ptr_ends.resize(0);
   
   decompress(DATA_BUFFER_CAP);
