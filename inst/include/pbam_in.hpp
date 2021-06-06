@@ -770,7 +770,7 @@ inline pbam1_t pbam_in::supplyRead(unsigned int thread_number) {
   if(read_cursors.at(thread_number) >= read_ptr_ends.at(thread_number)) {
     return(read);
   }
-  read = pbam1_t(data_buf + read_cursors.at(thread_number)), false);
+  read = pbam1_t(data_buf + read_cursors.at(thread_number), false);
   read_cursors.at(thread_number) += read.block_size() + 4;
   return(read);
 }
