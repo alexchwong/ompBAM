@@ -688,7 +688,7 @@ inline int pbam_in::obtainChrs(std::vector<std::string> & s_chr_names, std::vect
 
 inline int pbam_in::fillReads() {
   // Returns -1 if error, and 1 if EOF. Otherwise, returns 0
-  Rcout << "fillReads()\n";
+  // Rcout << "fillReads()\n";
   // If header not read:
   if(!magic_header) {
     Rcout << "Header is not yet read\n";
