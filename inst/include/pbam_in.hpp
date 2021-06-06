@@ -27,9 +27,11 @@ class pbam_in {
     
     char * data_buf; size_t data_buf_cap; size_t data_buf_cursor;
     
-    std::vector<char *> read_ptrs;              // Raw char pointers to data_buf
-    std::vector<uint32_t> read_ptr_partitions;  // std::maximum read # for threads 0 to i-1
-    std::vector<uint32_t> read_cursors;         // Read # to be returned @ next call to supplyRead
+    // std::vector<char *> read_ptrs;              // Raw char pointers to data_buf
+    // std::vector<uint32_t> read_ptr_partitions;  // std::maximum read # for threads 0 to i-1
+    
+    std::vector<size_t> read_cursors;         // Read # to be returned @ next call to supplyRead
+    std::vector<size_t> read_ptr_ends;
 
     void initialize_buffers();
     void clear_buffers();
@@ -104,10 +106,10 @@ inline void pbam_in::initialize_buffers() {
   magic_header = NULL; l_text = 0; headertext = NULL; n_ref = 0;
   chr_names.resize(0); chr_lens.resize(0);
 
-  read_ptrs.resize(0);
-  read_ptr_partitions.resize(0);
+  // read_ptrs.resize(0);
+  // read_ptr_partitions.resize(0);
   read_cursors.resize(0);
-  
+  read_ptr_ends.resize(0);
   IN = NULL;
 }
 
@@ -131,9 +133,8 @@ inline void pbam_in::clear_buffers() {
   magic_header = NULL; l_text = 0; headertext = NULL; n_ref = 0;
   chr_names.resize(0); chr_lens.resize(0);
 
-  read_ptrs.resize(0);
-  read_ptr_partitions.resize(0);
   read_cursors.resize(0);
+  read_ptr_ends.resize(0);
   
   IN = NULL;
 }
@@ -701,7 +702,7 @@ inline int pbam_in::fillReads() {
   // Check if previous reads are all read:
   if(read_cursors.size() > 0) {
     for(unsigned int i = 0; i < read_cursors.size(); i++) {
-      if(read_cursors.at(i) < read_ptr_partitions.at(i)) {
+      if(read_cursors.at(i) < read_ptr_ends.at(i)) {
         Rcout << "Thread " << i << " has reads remaining. Please debug your code ";
         Rcout << "and make sure all threads clear their reads before filling any more reads\n";
         return(-1);
@@ -710,39 +711,53 @@ inline int pbam_in::fillReads() {
   }
   
   // Clear read pointers:
-  read_ptrs.resize(0);
-  read_ptr_partitions.resize(0);
+  // read_ptrs.resize(0);
+  // read_ptr_partitions.resize(0);
   read_cursors.resize(0);
 
+  read_ptr_begins.resize(0);
+  read_ptr_ends.resize(0);
+  
   decompress(DATA_BUFFER_CAP);
   
-  // Iterates through data buffer aand assigns pointers to beginning of reads
   uint32_t *u32p;
-  bool has_reads_left_in_buffer = true;
-  while(has_reads_left_in_buffer) {
+  
+  if(data_buf_cap - data_buf_cursor < 4) {
+    return(1);
+  } else {
     u32p = (uint32_t *)(data_buf + data_buf_cursor);
     if(*u32p + 4 <= data_buf_cap - data_buf_cursor) {
-      read_ptrs.push_back(data_buf + data_buf_cursor);
-      data_buf_cursor += *u32p + 4;
-    } else {
-      has_reads_left_in_buffer = false;
+      return(1);
     }
   }
-
-  if(read_ptrs.size() == 0) {
-    // Rcout << "End of buffer reached\ttellg() = " << tellg() << '\n';
-    return(1);
-  }
   
-  // Partition reads by number of threads
-  unsigned int reads_per_thread = 1 + (read_ptrs.size() / threads_to_use);
-  unsigned int cursor = 0;
-  while(read_cursors.size() < threads_to_use) {
-    read_cursors.push_back(cursor);
-    cursor += reads_per_thread;
-    if(cursor > read_ptrs.size()) cursor = read_ptrs.size();
-    read_ptr_partitions.push_back(cursor);
+  // Roughly divide the buffer into N regions:
+  size_t data_divider = 1 + ((data_buf_cap - data_buf_cursor) / threads_to_use);
+  size_t next_divider = data_buf_cursor + data_divider;
+  // Iterates through data buffer aand assigns pointers to beginning of reads
+  
+  bool has_reads_left_in_buffer = true;
+  read_cursors.push_back(data_buf_cursor);
+  unsigned int threads_accounted_for = 0;
+  while(threads_accounted_for < threads_to_use) {
+    if(data_buf_cap - data_buf_cursor >= 4) {
+      u32p = (uint32_t *)(data_buf + data_buf_cursor);
+      if(*u32p + 4 <= data_buf_cap - data_buf_cursor) {
+        // Pushing every read into the vector is likely slowing things down
+        // TODO: only create barriers for thread starts / stops.
+        // read_ptrs.push_back(data_buf + data_buf_cursor);  
+        data_buf_cursor += *u32p + 4;
+      }
+    }
+    if(data_buf_cursor >= next_divider) {
+      read_ptr_ends.push_back(data_buf_cursor);
+      read_cursors.push_back(data_buf_cursor);
+      next_divider = std::max(data_buf_cap, next_divider + data_divider);
+      threads_accounted_for++;
+    }
   }
+  read_ptr_ends.push_back(data_buf_cursor);
+
   return(0);
 }
 
@@ -752,11 +767,11 @@ inline pbam1_t pbam_in::supplyRead(unsigned int thread_number) {
     Rcout << "Invalid thread number parsed to supplyRead()\n";
     return(read);
   }
-  if(read_cursors.at(thread_number) == read_ptr_partitions.at(thread_number)) {
+  if(read_cursors.at(thread_number) >= read_ptr_ends.at(thread_number)) {
     return(read);
   }
-  read = pbam1_t(read_ptrs.at(read_cursors.at(thread_number)), false);
-  read_cursors.at(thread_number)++;
+  read = pbam1_t(data_buf + read_cursors.at(thread_number)), false);
+  read_cursors.at(thread_number) += read.block_size() + 4;
   return(read);
 }
 
