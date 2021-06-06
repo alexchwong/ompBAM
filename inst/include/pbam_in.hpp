@@ -736,7 +736,7 @@ inline int pbam_in::fillReads() {
   size_t next_divider = data_buf_cursor + data_divider;
   // Iterates through data buffer aand assigns pointers to beginning of reads
   
-  bool has_reads_left_in_buffer = true;
+  // bool has_reads_left_in_buffer = true;
   read_cursors.push_back(data_buf_cursor);
   unsigned int threads_accounted_for = 0;
   while(threads_accounted_for < threads_to_use) {
