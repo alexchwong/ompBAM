@@ -711,53 +711,56 @@ inline int pbam_in::fillReads() {
   }
   
   // Clear read pointers:
-  // read_ptrs.resize(0);
-  // read_ptr_partitions.resize(0);
   read_cursors.resize(0);
-
-  // read_ptr_begins.resize(0);
   read_ptr_ends.resize(0);
   
   decompress(DATA_BUFFER_CAP);
   
   uint32_t *u32p;
-  
   if(data_buf_cap - data_buf_cursor < 4) {
     return(1);
   } else {
     u32p = (uint32_t *)(data_buf + data_buf_cursor);
-    if(*u32p + 4 <= data_buf_cap - data_buf_cursor) {
+    if(*u32p + 4 > data_buf_cap - data_buf_cursor) {
       return(1);
     }
   }
   
   // Roughly divide the buffer into N regions:
   size_t data_divider = 1 + ((data_buf_cap - data_buf_cursor) / threads_to_use);
-  size_t next_divider = data_buf_cursor + data_divider;
+  size_t next_divider = std::max(data_buf_cursor + data_divider, data_buf_cap);
   // Iterates through data buffer aand assigns pointers to beginning of reads
   
   // bool has_reads_left_in_buffer = true;
   read_cursors.push_back(data_buf_cursor);
   unsigned int threads_accounted_for = 0;
-  while(threads_accounted_for < threads_to_use) {
+  while(1) {
     if(data_buf_cap - data_buf_cursor >= 4) {
       u32p = (uint32_t *)(data_buf + data_buf_cursor);
       if(*u32p + 4 <= data_buf_cap - data_buf_cursor) {
-        // Pushing every read into the vector is likely slowing things down
-        // TODO: only create barriers for thread starts / stops.
-        // read_ptrs.push_back(data_buf + data_buf_cursor);  
         data_buf_cursor += *u32p + 4;
+      } else {
+        break;
       }
+    } else {
+      break;
     }
-    if(data_buf_cursor >= next_divider) {
+    if(data_buf_cursor >= next_divider && threads_accounted_for < threads_to_use - 1) {
       read_ptr_ends.push_back(data_buf_cursor);
       read_cursors.push_back(data_buf_cursor);
       next_divider = std::max(data_buf_cap, next_divider + data_divider);
       threads_accounted_for++;
     }
   }
-  read_ptr_ends.push_back(data_buf_cursor);
 
+  if(threads_accounted_for < threads_to_use - 1) {
+    read_ptr_ends.push_back(data_buf_cursor);
+    read_cursors.push_back(data_buf_cursor);
+    next_divider = std::max(data_buf_cap, next_divider + data_divider);
+    threads_accounted_for++;
+  }
+
+  read_ptr_ends.push_back(data_buf_cursor);
   return(0);
 }
 
