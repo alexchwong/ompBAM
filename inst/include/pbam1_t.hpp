@@ -40,6 +40,8 @@ class pbam1_t{
     bool isReal() const {return(realized);};
     
     // Getters:
+    uint32_t block_size() {return(block_size);};
+    
     int32_t refID();
     int32_t pos();
     uint8_t l_read_name();
