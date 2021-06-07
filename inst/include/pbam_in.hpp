@@ -511,7 +511,7 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     }
   }
   
-  if(threads_accounted_for < decomp_threads - 1) {
+  while(threads_accounted_for < decomp_threads - 1) {
     src_bgzf_cap.push_back(file_buf_cursor + src_cursor);  
     dest_bgzf_cap.push_back(decomp_cursor + dest_cursor);
     src_bgzf_pos.push_back(file_buf_cursor + src_cursor);  
@@ -789,7 +789,7 @@ inline int pbam_in::fillReads() {
     }
   }
 
-  if(threads_accounted_for < threads_to_use - 1) {
+  while(threads_accounted_for < threads_to_use - 1) {
     read_ptr_ends.push_back(data_buf_cursor);
     read_cursors.push_back(data_buf_cursor);
     // next_divider = std::max(data_buf_cap, next_divider + data_divider);
