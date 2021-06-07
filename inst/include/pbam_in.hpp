@@ -378,13 +378,13 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     then runs read_file_chunk_to_spare_buffer
   Decompresses any data in file_buf to fill up to n_bytes_to_decompress in data_buf
 */
-  Rcout << "decompress\n";
+  // Rcout << "decompress\n";
   clean_data_buffer(n_bytes_to_decompress);
   if(n_bytes_to_decompress < data_buf_cap) return(0);
   
   size_t decomp_cursor = data_buf_cap;  // The cursor to the data buffer to begin adding data
   size_t max_bytes_to_decompress = std::min(n_bytes_to_decompress, DATA_BUFFER_CAP) - decomp_cursor;
-  Rcout << "data_buf_cap " << data_buf_cap << " n_bytes_to_decompress " << n_bytes_to_decompress << "\n";
+  // Rcout << "data_buf_cap " << data_buf_cap << " n_bytes_to_decompress " << n_bytes_to_decompress << "\n";
 
 // Check if file buffer needs filling
   size_t spare_bytes_to_fill = 0;
@@ -447,7 +447,7 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     bgzf_count++;
     
     if(check_gzip_head) {
-      Rcout << "file_buf_cursor " << file_buf_cursor << " src_cursor " << src_cursor << '\n';
+      // Rcout << "file_buf_cursor " << file_buf_cursor << " src_cursor " << src_cursor << '\n';
       if(strncmp(bamGzipHead, file_buf + file_buf_cursor + src_cursor, bamGzipHeadLength) != 0) {
         break;  // Gzip head corrupt
       } else {
@@ -469,7 +469,7 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     dest_cursor += *u32;
 
   }
-  Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << "done\n";
+  // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << "done\n";
 
   if(check_gzip_head) {
     Rcout << "BGZF blocks corrupt\n";
@@ -485,11 +485,11 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
   
   // Profile the file and increment until the destination buffer is reached
 
-  Rcout << "file_buf_cursor = " << file_buf_cursor <<
-    " file_buf_cap = " << file_buf_cap <<
-    " next_file_buf_cap = " << next_file_buf_cap <<
-    " data_buf_cap = " << data_buf_cap << 
-    " data_buf_cursor = " << data_buf_cursor << '\n';
+  // Rcout << "file_buf_cursor = " << file_buf_cursor <<
+    // " file_buf_cap = " << file_buf_cap <<
+    // " next_file_buf_cap = " << next_file_buf_cap <<
+    // " data_buf_cap = " << data_buf_cap << 
+    // " data_buf_cursor = " << data_buf_cursor << '\n';
   unsigned int threads_accounted_for = 0;
   src_bgzf_pos.push_back(file_buf_cursor + src_cursor);  
   dest_bgzf_pos.push_back(decomp_cursor + dest_cursor);
@@ -510,7 +510,17 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
       // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << '\n';
     }
   }
-  Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << "done\n";
+  
+  if(threads_accounted_for < decomp_threads - 1) {
+    src_bgzf_cap.push_back(file_buf_cursor + src_cursor);  
+    dest_bgzf_cap.push_back(decomp_cursor + dest_cursor);
+    src_bgzf_pos.push_back(file_buf_cursor + src_cursor);  
+    dest_bgzf_pos.push_back(decomp_cursor + dest_cursor);
+    // next_divider = std::min(next_divider + src_divider, src_max);
+    threads_accounted_for++;
+    // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << '\n';
+  }  
+  // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << "done\n";
 
   // NB: last src and dest bgzf pos are the end: So always one more bgzf pos than done
   src_bgzf_cap.push_back(file_buf_cursor + src_max);   
@@ -592,7 +602,7 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
         }
         thread_src_cursor += *src_size + 1;
         thread_dest_cursor += *dest_size;
-// Rcout << "thread_src_cursor = " << thread_src_cursor << " thread_dest_cursor = " << thread_dest_cursor << '\n';
+Rcout << "thread_src_cursor = " << thread_src_cursor << " thread_dest_cursor = " << thread_dest_cursor << '\n';
 
       }
     }
@@ -606,8 +616,8 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
   
   file_buf_cursor = src_bgzf_cap.at(src_bgzf_cap.size() - 1);
   data_buf_cap = dest_bgzf_cap.at(dest_bgzf_cap.size() - 1);
-  Rcout << "file_buf_cursor = " << file_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
-  Rcout << "decompress() done\ttellg() = " << tellg() << '\n';
+  // Rcout << "file_buf_cursor = " << file_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
+  // Rcout << "decompress() done\ttellg() = " << tellg() << '\n';
   return(dest_cursor);
 }
 
@@ -737,7 +747,7 @@ inline int pbam_in::fillReads() {
   read_ptr_ends.resize(0);
   
   decompress(DATA_BUFFER_CAP);
-  // Rcout << "Decompress done\n";
+  Rcout << "Decompress done\n";
   
   uint32_t *u32p;
   if(data_buf_cap - data_buf_cursor < 4) {
@@ -782,7 +792,7 @@ inline int pbam_in::fillReads() {
   if(threads_accounted_for < threads_to_use - 1) {
     read_ptr_ends.push_back(data_buf_cursor);
     read_cursors.push_back(data_buf_cursor);
-    next_divider = std::max(data_buf_cap, next_divider + data_divider);
+    // next_divider = std::max(data_buf_cap, next_divider + data_divider);
     threads_accounted_for++;
     // Rcout << data_buf_cursor << '\t';
   }
