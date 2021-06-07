@@ -40,12 +40,14 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
   Progress p(inbam.GetFileSize(), verbose);
 
   while(0 == inbam.fillReads()) {
+    // Rcout << "Reads filled\n";
     p.increment(inbam.IncProgress());
     
     #ifdef _OPENMP
     #pragma omp parallel for num_threads(n_threads_to_really_use) schedule(static,1)
     #endif
     for(unsigned int i = 0; i < n_threads_to_really_use; i++) {
+      // Rcout << "Thread " << i << "\n";
       std::vector<uint32_t> read_counter(ret);
       pbam1_t read;
       read = inbam.supplyRead(i);
