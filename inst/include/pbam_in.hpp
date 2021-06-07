@@ -199,7 +199,7 @@ inline int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threa
   
   // Assign IS_LENGTH
   IN->seekg(0, std::ios_base::end);
-  IS_LENGTH = IN->tellg();
+  IS_LENGTH = tellg();
   
   // Check valid EOF:
   IN->seekg(IS_LENGTH-bamEOFlength, std::ios_base::beg);
@@ -286,7 +286,7 @@ inline size_t pbam_in::load_from_file(size_t n_bytes) {
   size_t residual = file_buf_cap-file_buf_cursor;
   // Rcout << "Residual = " << residual << '\n';
   size_t n_bytes_to_load =  std::min( std::max(n_bytes, residual) , FILE_BUFFER_CAP);  // Cap at file buffer
-  size_t n_bytes_to_read = std::min(n_bytes_to_load - residual, IS_LENGTH - IN->tellg());
+  size_t n_bytes_to_read = std::min(n_bytes_to_load - residual, IS_LENGTH - tellg());
   if(n_bytes_to_read == 0) return(0);
   
   // Remove residual bytes to beginning of buffer:
@@ -329,7 +329,7 @@ inline size_t pbam_in::read_file_chunk_to_spare_buffer(size_t n_bytes) {
   if(FILE_BUFFER_CAP <= next_file_buf_cap) return(0);
   
   size_t n_bytes_to_load =  std::min( std::max(n_bytes, next_file_buf_cap) , FILE_BUFFER_CAP);  // Cap at file buffer
-  size_t n_bytes_to_read = std::min(n_bytes_to_load - next_file_buf_cap, IS_LENGTH - IN->tellg());  
+  size_t n_bytes_to_read = std::min(n_bytes_to_load - next_file_buf_cap, IS_LENGTH - tellg());  
 
   if(n_bytes_to_read == 0) return(0);
   
@@ -764,7 +764,7 @@ inline int pbam_in::fillReads() {
   size_t next_divider = std::min(data_buf_cursor + data_divider, data_buf_cap);
   // Iterates through data buffer aand assigns pointers to beginning of reads
   // Rcout << "data_buf_cursor = " << data_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
-  // Rcout << "IN->tellg() = " << IN->tellg() << " file_buf_cap = " << file_buf_cap << 
+  // Rcout << "tellg() = " << tellg() << " file_buf_cap = " << file_buf_cap << 
     // " file_buf_cursor = " << file_buf_cursor << " next_file_buf_cap = " << next_file_buf_cap << '\n';
   // bool has_reads_left_in_buffer = true;
   read_cursors.push_back(data_buf_cursor);
