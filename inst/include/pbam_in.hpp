@@ -602,7 +602,7 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
         }
         thread_src_cursor += *src_size + 1;
         thread_dest_cursor += *dest_size;
-Rcout << "thread_src_cursor = " << thread_src_cursor << " thread_dest_cursor = " << thread_dest_cursor << '\n';
+// Rcout << "thread_src_cursor = " << thread_src_cursor << " thread_dest_cursor = " << thread_dest_cursor << '\n';
 
       }
     }
@@ -747,7 +747,7 @@ inline int pbam_in::fillReads() {
   read_ptr_ends.resize(0);
   
   decompress(DATA_BUFFER_CAP);
-  Rcout << "Decompress done\n";
+  // Rcout << "Decompress done\n";
   
   uint32_t *u32p;
   if(data_buf_cap - data_buf_cursor < 4) {
