@@ -396,7 +396,7 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
       if(max_bytes_to_decompress > chunk_size) {
         // Obviously asking to decompress a lot of data. Use full buffer
         load_from_file(FILE_BUFFER_CAP);
-        spare_bytes_to_fill = chunk_size;
+        spare_bytes_to_fill = std::min(chunk_size, IS_LENGTH - (size_t)tellg());
       } else {
         // If only asking for small amount of data, do not use full buffer
         load_from_file(max_bytes_to_decompress);
@@ -416,64 +416,6 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     spare_bytes_to_fill = 0;
   }
 
-  size_t src_cursor = 0;
-  size_t dest_cursor = 0;
-  
-  std::vector<size_t> src_bgzf_pos;
-  std::vector<size_t> dest_bgzf_pos;
-  bool check_gzip_head = false;
-  uint32_t * u32; uint16_t * u16;
-
-  // Profile the file and increment until the destination buffer is reached
-  unsigned int bgzf_count = 0;
-  // Rcout << "file_buf_cursor = " << file_buf_cursor <<
-    // " file_buf_cap = " << file_buf_cap <<
-    // " next_file_buf_cap = " << next_file_buf_cap <<
-    // " data_buf_cap = " << data_buf_cap << 
-    // " data_buf_cursor = " << data_buf_cursor << '\n';
-  while(src_cursor < chunk_size) {
-    // Abort if cannot read smallest possible bgzf block:
-    if(file_buf_cursor + src_cursor + 28 > file_buf_cap) break;
-
-    // Check bamGzipHead every 1000 blocks
-    if(bgzf_count % 1000 == 0) check_gzip_head = true; // Check every 10000 blocks
-    if(check_gzip_head) {
-      // Rcout << "file_buf_cursor " << file_buf_cursor << " src_cursor " << src_cursor << '\n';
-      if(strncmp(bamGzipHead, file_buf + file_buf_cursor + src_cursor, bamGzipHeadLength) != 0) {
-        break;  // Gzip head corrupt
-      } else {
-        check_gzip_head = false;
-      }
-    }
-    
-    // Abort if cannot read entire bgzf block:
-    u16 = (uint16_t*)(file_buf + file_buf_cursor + src_cursor + 16);
-    if(file_buf_cursor + src_cursor + (*u16+1) > file_buf_cap) break;
-    if(src_cursor + (*u16+1) > chunk_size) break;   // will not read above chunk_size
-    
-    // Abort if filling dest with extra data will lead to overflow
-    u32 = (uint32_t*)(file_buf + file_buf_cursor + src_cursor + (*u16+1) - 4);
-    if(dest_cursor + *u32 > max_bytes_to_decompress) break;
-
-    // If checks passed, designate these blocks to be decompressed
-    src_bgzf_pos.push_back(file_buf_cursor + src_cursor);  
-    src_cursor += *u16 + 1;
-    
-    dest_bgzf_pos.push_back(decomp_cursor + dest_cursor);
-    dest_cursor += *u32;
-
-    bgzf_count++;
-  }
-
-  if(check_gzip_head) {
-    Rcout << "BGZF blocks corrupt\n";
-    return(0);
-  }
-  
-  // NB: last src and dest bgzf pos are the end: So always one more bgzf pos than done
-  src_bgzf_pos.push_back(file_buf_cursor + src_cursor);   
-  dest_bgzf_pos.push_back(decomp_cursor + dest_cursor);
-  
   unsigned int decomp_threads = threads_to_use;
   if(spare_bytes_to_fill > 0) {
     if(decomp_threads > 1) {
@@ -483,17 +425,96 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
       spare_bytes_to_fill = 0;
     }
   }
+
+  size_t src_cursor = 0;
+  size_t dest_cursor = 0;
   
-  // Assign jobs between n threads
-  std::vector<unsigned int> thrd_partitions;
-  unsigned int job_inc = 0;
-  unsigned int job_size = (src_bgzf_pos.size()) / decomp_threads;
-  for(unsigned int k = 0; k < decomp_threads; k++) {
-    thrd_partitions.push_back(job_inc);
-    job_inc+=job_size;
+  std::vector<size_t> src_bgzf_pos;   // source cursors
+  std::vector<size_t> dest_bgzf_pos;  // dest cursors    
+  std::vector<size_t> src_bgzf_cap;   // source cap
+  std::vector<size_t> dest_bgzf_cap;  // dest cap    
+  bool check_gzip_head = false;
+  uint32_t * u32; uint16_t * u16;
+
+  // Trial run to see if data limited at source file cap, or destination cap
+  unsigned int bgzf_count = 0;
+  while(src_cursor < chunk_size) {
+    if(file_buf_cursor + src_cursor + 28 > file_buf_cap) break;
+
+    // Check bamGzipHead every 1000 blocks
+    if(bgzf_count % 1000 == 0) check_gzip_head = true; // Check every 10000 blocks
+    bgzf_count++;
+    
+    if(check_gzip_head) {
+      // Rcout << "file_buf_cursor " << file_buf_cursor << " src_cursor " << src_cursor << '\n';
+      if(strncmp(bamGzipHead, file_buf + file_buf_cursor + src_cursor, bamGzipHeadLength) != 0) {
+        break;  // Gzip head corrupt
+      } else {
+        check_gzip_head = false;
+      }
+    }
+
+    u16 = (uint16_t*)(file_buf + file_buf_cursor + src_cursor + 16);
+    if(file_buf_cursor + src_cursor + (*u16+1) > file_buf_cap) break;
+
+    if(src_cursor + (*u16+1) > chunk_size) break; // will not read above chunk_size
+    
+    // Abort if filling dest with extra data will lead to overflow
+    u32 = (uint32_t*)(file_buf + file_buf_cursor + src_cursor + (*u16+1) - 4);
+    if(dest_cursor + *u32 > max_bytes_to_decompress) break;   
+    
+    // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << '\n';
+    src_cursor += *u16 + 1;
+    dest_cursor += *u32;
+
   }
-  thrd_partitions.push_back(src_bgzf_pos.size()-1); 
+  // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << "done\n";
+
+  if(check_gzip_head) {
+    Rcout << "BGZF blocks corrupt\n";
+    return(0);
+  }
+
+// Usage of source bytes to divide workload:
+  size_t src_max = src_cursor; size_t dest_max = dest_cursor;
+  size_t src_divider = 1 + (src_max / decomp_threads);
+  size_t next_divider = src_divider;
+  src_cursor = 0;
+  dest_cursor = 0;
   
+  // Profile the file and increment until the destination buffer is reached
+
+  // Rcout << "file_buf_cursor = " << file_buf_cursor <<
+    // " file_buf_cap = " << file_buf_cap <<
+    // " next_file_buf_cap = " << next_file_buf_cap <<
+    // " data_buf_cap = " << data_buf_cap << 
+    // " data_buf_cursor = " << data_buf_cursor << '\n';
+  unsigned int threads_accounted_for = 0;
+  src_bgzf_pos.push_back(file_buf_cursor + src_cursor);  
+  dest_bgzf_pos.push_back(decomp_cursor + dest_cursor);
+  while(src_cursor < src_max) {
+    u16 = (uint16_t*)(file_buf + file_buf_cursor + src_cursor + 16);
+    u32 = (uint32_t*)(file_buf + file_buf_cursor + src_cursor + (*u16+1) - 4);
+    src_cursor += *u16 + 1;
+    dest_cursor += *u32;
+    
+
+    if(src_cursor > next_divider && threads_accounted_for < decomp_threads - 1) {
+      src_bgzf_cap.push_back(file_buf_cursor + src_cursor);  
+      dest_bgzf_cap.push_back(decomp_cursor + dest_cursor);
+      src_bgzf_pos.push_back(file_buf_cursor + src_cursor);  
+      dest_bgzf_pos.push_back(decomp_cursor + dest_cursor);
+      next_divider = std::min(next_divider + src_divider, src_max);
+      threads_accounted_for++;
+      // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << '\n';
+    }
+  }
+  // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << "done\n";
+
+  // NB: last src and dest bgzf pos are the end: So always one more bgzf pos than done
+  src_bgzf_cap.push_back(file_buf_cursor + src_max);   
+  dest_bgzf_cap.push_back(decomp_cursor + dest_max);
+   
   // Now comes the multi-threaded decompression:
   bool error_occurred = false;
   
@@ -508,70 +529,70 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
       read_file_chunk_to_spare_buffer(spare_bytes_to_fill);
       spare_bytes_to_fill = 0;
     } else {
-      unsigned int i = thrd_partitions.at(k);
+      // unsigned int i = thrd_partitions.at(k);
 
-      size_t thread_src_cursor = 0;
-      size_t thread_dest_cursor = 0;
-
+      size_t thread_src_cursor = src_bgzf_pos.at(k);
+      size_t thread_dest_cursor = dest_bgzf_pos.at(k);
       uint32_t crc = 0;
       uint32_t * crc_check;
-      uint32_t src_size = 0;
-      uint32_t dest_size = 0;
+      uint16_t * src_size;
+      uint32_t * dest_size;
 
       z_stream * zs;
-      while(i < thrd_partitions.at(k+1) && !error_occurred) {
-        thread_src_cursor = src_bgzf_pos.at(i);
-        thread_dest_cursor = dest_bgzf_pos.at(i);
-        crc_check = (uint32_t *)(file_buf + src_bgzf_pos.at(i+1) - 8);
-        src_size = src_bgzf_pos.at(i+1) - thread_src_cursor;
-        dest_size = dest_bgzf_pos.at(i+1) - thread_dest_cursor;
+      while(thread_src_cursor < src_bgzf_cap.at(k) && !error_occurred) {
+        src_size = (uint16_t *)(file_buf + thread_src_cursor + 16);
+        crc_check = (uint32_t *)(file_buf + thread_src_cursor + *src_size+1 - 8);
+        dest_size = (uint32_t *)(file_buf + thread_src_cursor + *src_size+1 - 4);
 
-        // Rcout << thread_src_cursor << "\t" << thread_dest_cursor << '\t' << src_size << "\t" << dest_size << '\n';
-        zs = new z_stream;
-        zs->zalloc = NULL; zs->zfree = NULL; zs->msg = NULL;
-        zs->next_in = (Bytef*)(file_buf + thread_src_cursor + 18);
-        zs->avail_in = src_size - 18;
-        zs->next_out = (Bytef*)(data_buf + thread_dest_cursor);
-        zs->avail_out = dest_size;
+        if(*dest_size > 0) {
+          // Rcout << thread_src_cursor << "\t" << thread_dest_cursor << '\t' << *src_size+1 << "\t" << *dest_size << '\n';
+          zs = new z_stream;
+          zs->zalloc = NULL; zs->zfree = NULL; zs->msg = NULL;
+          zs->next_in = (Bytef*)(file_buf + thread_src_cursor + 18);
+          zs->avail_in = *src_size + 1 - 18;
+          zs->next_out = (Bytef*)(data_buf + thread_dest_cursor);
+          zs->avail_out = *dest_size;
 
-        int ret = inflateInit2(zs, -15);
-        if(ret != Z_OK) {
-          Rcout << "Exception during BAM decompression - inflateInit2() fail: (" << ret << ") "
-            "BGZF block number" << i << '\n';
-            
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-          error_occurred = true;
-        }
-        if(!error_occurred) {
-          ret = inflate(zs, Z_FINISH);
-          if(ret != Z_OK && ret != Z_STREAM_END) {
-            Rcout << "Exception during BAM decompression - inflate() fail: (" << ret << ") "
-              "BGZF block number" << i << '\n';
-#ifdef _OPENMP
-#pragma omp critical
-#endif
+          int ret = inflateInit2(zs, -15);
+          if(ret != Z_OK) {
+            Rcout << "Exception during BAM decompression - inflateInit2() fail: (" << ret << ") \n";
+              
+  #ifdef _OPENMP
+  #pragma omp critical
+  #endif
             error_occurred = true;
           }
-        }
-        if(!error_occurred) {
-          ret = inflateEnd(zs);
-
-          crc = crc32(crc32(0L, NULL, 0L), 
-          (Bytef*)(data_buf + thread_dest_cursor), dest_size);
-          if(*crc_check != crc) {
-            Rcout << "CRC fail during BAM decompression" << ", BGZF block number" << i << '\n';
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-            error_occurred = true;
+          if(!error_occurred) {
+            ret = inflate(zs, Z_FINISH);
+            if(ret != Z_OK && ret != Z_STREAM_END) {
+              Rcout << "Exception during BAM decompression - inflate() fail: (" << ret << ") \n";
+  #ifdef _OPENMP
+  #pragma omp critical
+  #endif
+              error_occurred = true;
+            }
           }
+          if(!error_occurred) {
+            ret = inflateEnd(zs);
 
+            crc = crc32(crc32(0L, NULL, 0L), 
+            (Bytef*)(data_buf + thread_dest_cursor), *dest_size);
+            if(*crc_check != crc) {
+              Rcout << "CRC fail during BAM decompression\n";
+  #ifdef _OPENMP
+  #pragma omp critical
+  #endif
+              error_occurred = true;
+            }
+
+          }
+          
+          delete zs;
         }
-        
-        delete zs;
-        i++;
+        thread_src_cursor += *src_size + 1;
+        thread_dest_cursor += *dest_size;
+Rcout << "thread_src_cursor = " << thread_src_cursor << " thread_dest_cursor = " << thread_dest_cursor << '\n';
+
       }
     }
     
@@ -582,9 +603,9 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
     return(0);
   }
   
-  file_buf_cursor = src_bgzf_pos.at(src_bgzf_pos.size() - 1);
-  data_buf_cap = dest_bgzf_pos.at(dest_bgzf_pos.size() - 1);
-  // Rcout << "file_buf_cursor = " << file_buf_cursor << '\n';
+  file_buf_cursor = src_bgzf_cap.at(src_bgzf_cap.size() - 1);
+  data_buf_cap = dest_bgzf_cap.at(dest_bgzf_cap.size() - 1);
+  // Rcout << "file_buf_cursor = " << file_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
   // Rcout << "decompress() done\ttellg() = " << tellg() << '\n';
   return(dest_cursor);
 }
@@ -715,6 +736,7 @@ inline int pbam_in::fillReads() {
   read_ptr_ends.resize(0);
   
   decompress(DATA_BUFFER_CAP);
+  Rcout << "Decompress done\n";
   
   uint32_t *u32p;
   if(data_buf_cap - data_buf_cursor < 4) {
@@ -730,7 +752,9 @@ inline int pbam_in::fillReads() {
   size_t data_divider = 1 + ((data_buf_cap - data_buf_cursor) / threads_to_use);
   size_t next_divider = std::min(data_buf_cursor + data_divider, data_buf_cap);
   // Iterates through data buffer aand assigns pointers to beginning of reads
-  // Rcout << "data_buf_cursor = " << data_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
+  Rcout << "data_buf_cursor = " << data_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
+  Rcout << "IN->tellg() = " << IN->tellg() << " file_buf_cap = " << file_buf_cap << 
+    " file_buf_cursor = " << file_buf_cursor << " next_file_buf_cap = " << next_file_buf_cap << '\n';
   // bool has_reads_left_in_buffer = true;
   read_cursors.push_back(data_buf_cursor);
   unsigned int threads_accounted_for = 0;
@@ -750,7 +774,7 @@ inline int pbam_in::fillReads() {
       read_cursors.push_back(data_buf_cursor);
       next_divider = std::min(data_buf_cap, next_divider + data_divider);
       threads_accounted_for++;
-      // Rcout << data_buf_cursor << '\t';
+      Rcout << data_buf_cursor << '\t';
     }
   }
 
@@ -759,11 +783,11 @@ inline int pbam_in::fillReads() {
     read_cursors.push_back(data_buf_cursor);
     next_divider = std::max(data_buf_cap, next_divider + data_divider);
     threads_accounted_for++;
-    // Rcout << data_buf_cursor << '\t';
+    Rcout << data_buf_cursor << '\t';
   }
 
   read_ptr_ends.push_back(data_buf_cursor);
-  // Rcout << data_buf_cursor << '\n';
+  Rcout << data_buf_cursor << '\n';
   return(0);
 }
 
