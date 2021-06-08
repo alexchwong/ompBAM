@@ -27,26 +27,20 @@ class pbam_in {
     
     char * data_buf; size_t data_buf_cap; size_t data_buf_cursor;
     
-    // std::vector<char *> read_ptrs;              // Raw char pointers to data_buf
-    // std::vector<uint32_t> read_ptr_partitions;  // std::maximum read # for threads 0 to i-1
-    
     std::vector<size_t> read_cursors;         // Read # to be returned @ next call to supplyRead
     std::vector<size_t> read_ptr_ends;
 
-    void initialize_buffers();
-    void clear_buffers();
+    void    initialize_buffers();
+    void    clear_buffers();
 
-    int swap_file_buffer_if_needed();
-    size_t load_from_file(size_t n_bytes);
-    size_t fill_file_buffer();
+    int     clean_data_buffer(size_t n_bytes_to_decompress);
+    int     swap_file_buffer_if_needed();
+    size_t  load_from_file(size_t n_bytes);
+    size_t  fill_file_buffer();
+    size_t  read_file_chunk_to_spare_buffer(size_t n_bytes);
 
-    unsigned int calculate_chunks_to_load_to_secondary_buffer();
-    size_t read_file_chunk_to_spare_buffer(size_t n_bytes);
-
-    size_t decompress(size_t n_bytes_to_decompress);
-    
-    
-    int clean_data_buffer(size_t n_bytes_to_decompress);
+    int     readHeader();
+    size_t  decompress(size_t n_bytes_to_decompress);
 
     // Only for reading header
     unsigned int read(char * dest, unsigned int len);  // returns the number of bytes actually read
@@ -74,7 +68,6 @@ class pbam_in {
     ~pbam_in();
 
     int SetInputHandle(std::istream *in_stream, unsigned int n_threads); // opens file stream, checks EOF and file size
-    int readHeader();
     int obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens);
 
     size_t GetFileSize() { return(IS_LENGTH); };
@@ -106,8 +99,6 @@ inline void pbam_in::initialize_buffers() {
   magic_header = NULL; l_text = 0; headertext = NULL; n_ref = 0;
   chr_names.resize(0); chr_lens.resize(0);
 
-  // read_ptrs.resize(0);
-  // read_ptr_partitions.resize(0);
   read_cursors.resize(0);
   read_ptr_ends.resize(0);
   IN = NULL;
@@ -126,33 +117,24 @@ inline void pbam_in::clear_buffers() {
   if(headertext) free(headertext); 
   headertext = NULL;
   
-  next_file_buf = NULL;
   file_buf_cap = 0; file_buf_cursor = 0;
   data_buf_cap = 0; data_buf_cursor = 0;
   next_file_buf_cap = 0;
-  magic_header = NULL; l_text = 0; headertext = NULL; n_ref = 0;
+  l_text = 0; n_ref = 0;
   chr_names.resize(0); chr_lens.resize(0);
 
   read_cursors.resize(0);
   read_ptr_ends.resize(0);
-  
   IN = NULL;
 }
 
 inline pbam_in::pbam_in() {
-  // Initialize buffers
   initialize_buffers();
-  // Settings reset
-  // FILE_BUFFER_CAP = 1000000000;
-  // DATA_BUFFER_CAP = 1000000000;
-  // FILE_BUFFER_SEGMENTS = 5;
-  // threads_to_use = 1;
   
   IN = NULL;
 }
 
 inline pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int file_buffer_segments) {
-  // Initialize buffers
   initialize_buffers();
   
   if(file_buffer_cap / file_buffer_segments < 1024576) {
@@ -171,17 +153,7 @@ inline pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned
 }
 
 inline pbam_in::~pbam_in() {
-  if(file_buf) free(file_buf); 
-  file_buf = NULL;
-  if(data_buf) free(data_buf); 
-  data_buf = NULL;
-  if(next_file_buf) free(next_file_buf); 
-  next_file_buf = NULL;
-
-  if(magic_header) free(magic_header); 
-  magic_header = NULL;
-  if(headertext) free(headertext); 
-  headertext = NULL;
+  clear_buffers();
 }
 
 inline int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threads) {
@@ -313,14 +285,6 @@ inline size_t pbam_in::load_from_file(size_t n_bytes) {
 
 inline size_t pbam_in::fill_file_buffer() {
   return(load_from_file(FILE_BUFFER_CAP));
-}
-
-inline unsigned int pbam_in::calculate_chunks_to_load_to_secondary_buffer() {
-  size_t chunk_size = (size_t)(FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS);
-  unsigned int n_chunks_to_fetch = (file_buf_cursor / chunk_size) + 1;
-  unsigned int n_chunks_avail = (next_file_buf_cap / chunk_size);
-  if(n_chunks_to_fetch <= n_chunks_avail) return(0);
-  return(n_chunks_to_fetch - n_chunks_avail);
 }
 
 inline size_t pbam_in::read_file_chunk_to_spare_buffer(size_t n_bytes) {
