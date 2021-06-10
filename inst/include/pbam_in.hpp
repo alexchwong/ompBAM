@@ -1,84 +1,148 @@
 #ifndef _pbam_in
 #define _pbam_in
 
+/*
+  Class Description
+*/
 class pbam_in {
   private:
-// pbam_in settings
-    size_t FILE_BUFFER_CAP = 200000000;     // 1e8
-    size_t DATA_BUFFER_CAP = 1000000000;    // 1e9
-    unsigned int FILE_BUFFER_SEGMENTS = 10;  // Divide file buffer into n segments
-    unsigned int threads_to_use = 1;
+// pbam_in Settings
+    size_t          FILE_BUFFER_CAP       = 200000000;      // 1e8
+    size_t          DATA_BUFFER_CAP       = 1000000000;     // 1e9
+    unsigned int    chunks_per_file_buf  = 5;             // Divide file buffer into n segments
+    unsigned int    threads_to_use        = 1;
   
 // File particulars
-    std::istream * IN;    
-    size_t IS_LENGTH;     // size of BAM file (Input Stream Length)
+    std::istream    * IN;    
+    size_t          IS_LENGTH;     // size of BAM file (Input Stream Length)
   
-    // Header storage:
-    char * magic_header;  // Always of size = 8
-    uint32_t l_text;      // sizeof *headertext
-    char * headertext;
-    uint32_t n_ref;
-    std::vector<std::string> chr_names;
-    std::vector<uint32_t> chr_lens;
+// Header storage:
+    char                        * magic_header;  // Always of size = 8
+    uint32_t                    l_text;      // sizeof *headertext
+    char                        * headertext;
+    
+// Chromosomes:
+    uint32_t                    n_ref;    
+    std::vector<std::string>    chr_names;
+    std::vector<uint32_t>       chr_lens;
   
-    // Data buffers
-    char * file_buf; size_t file_buf_cap; size_t file_buf_cursor;
-    char * next_file_buf; size_t next_file_buf_cap;
+// Data buffers
+    char *          file_buf; 
+    size_t          file_buf_cap; 
+    size_t          file_buf_cursor;
     
-    char * data_buf; size_t data_buf_cap; size_t data_buf_cursor;
+    char *          next_file_buf; 
+    size_t          next_file_buf_cap;
     
-    std::vector<size_t> read_cursors;         // Read # to be returned @ next call to supplyRead
-    std::vector<size_t> read_ptr_ends;
+    char *          data_buf; 
+    size_t          data_buf_cap; 
+    size_t          data_buf_cursor;
+    
+/* 
+  Thread-specific read cursor positions and boundaries
+  Thread returns a null read if cursor read_cursors >= read_ptr_ends
+*/
+    std::vector<size_t>         read_cursors;     // Cursor(s) of start of next read in each thread
+    std::vector<size_t>         read_ptr_ends;    // Boundaries of read positions in each thread
 
-    void    initialize_buffers();
-    void    clear_buffers();
+// Internal functions
 
-    int     clean_data_buffer(size_t n_bytes_to_decompress);
-    int     swap_file_buffer_if_needed();
-    size_t  load_from_file(size_t n_bytes);
-    size_t  fill_file_buffer();
-    size_t  read_file_chunk_to_spare_buffer(size_t n_bytes);
+// *** Initialisers ***
+    void            initialize_buffers();         // Initialises a pbam_in
+    void            clear_buffers();              // Clears all buffers and re-initialises pbam_in
 
-    int     readHeader();
-    size_t  decompress(size_t n_bytes_to_decompress);
+// *** Internal functions run by decompress() ***
 
-    // Only for reading header
-    unsigned int read(char * dest, unsigned int len);  // returns the number of bytes actually read
-    unsigned int ignore(unsigned int len);
-    unsigned int peek(char * dest, unsigned int len) ;
+    // Removes all data upstream of data_buf_cursor
+    int             clean_data_buffer(const size_t n_bytes_to_decompress);  
+    
+    /* 
+      If bytes remaining in primary file buffer is less than chunk_size,
+      re-initialises file_buf, copying residual data from existing file_buf,
+      and copies data from next_file_buf, upto FILE_BUFFER_CAP
+    */
+    int             swap_file_buffer_if_needed();
+    
+    // Reads from file and copies data to file_buf, upto a maximum of n_bytes
+    size_t          load_from_file(const size_t n_bytes);
 
-    // Convenience functions
-    size_t tellg() {return((size_t)IN->tellg());};
-    size_t prog_tellg() {
+    // Runs load_from_file using n_bytes = FILE_BUFFER_CAP
+    size_t          fill_file_buffer();
+
+    // Essentially same as load_from_file, but this reads data into next_file_buf
+    size_t          read_file_chunk_to_spare_buffer(const size_t n_bytes);
+
+// *** Main DECOMPRESS function ***
+    size_t          decompress(const size_t n_bytes_to_decompress);
+
+// *** Internal functions used by readHeader() ***
+    unsigned int read(char * dest, const unsigned int len);  // returns the number of bytes actually read
+    unsigned int ignore(unsigned const int len);
+    unsigned int peek(char * dest, const unsigned int len) ;
+    
+// *** Reads the BAM header. Automatically run with SetInputHandle() ***
+    int             readHeader();
+
+
+// *** File specific functions ***
+    size_t tellg() {return((size_t)IN->tellg());};    // Returns position of file cursor
+    
+    size_t prog_tellg() {                             // Returns the number of bytes decompressed
       return((size_t)IN->tellg()
         - (file_buf_cap-file_buf_cursor)
         - next_file_buf_cap
     ); };
-    bool eof() {return(IS_LENGTH == tellg());};
-    bool fail() {return(IN->fail());};
     
-    size_t PROGRESS = 0;    
+    bool eof() {return(IS_LENGTH == tellg());};       // Returns whether end of file is reached
+    bool fail() {return(IN->fail());};                // Returns any ifstream errors
     
-    // Disable copy construction / assignment:
+    size_t PROGRESS = 0;    // Value of prog_tellg() when IncProgress() is last called
+    
+// Disable copy construction / assignment (doing so triggers compile errors)
     pbam_in(const pbam_in &t);
     pbam_in & operator = (const pbam_in &t);
+    
   public:
+    // Creates pbam_in using default values
     pbam_in();
-    pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int file_buffer_segments);
+    // Creates a pbam_in with custom caps on file and data buffer sizes, as well as chunks per file
+    pbam_in(const size_t file_buffer_cap, const size_t data_buffer_cap, const unsigned int chunks_per_file_buf);
+    
     ~pbam_in();
 
-    int SetInputHandle(std::istream *in_stream, unsigned int n_threads); // opens file stream, checks EOF and file size
+    /*
+      Assign a ifstream handle to pbam_in; declares number of threads to use.
+      in_stream must point to an ifstream that has opened a BAM file in binary mode
+      Additionally, this function reads the BAM header.
+    */
+    int SetInputHandle(std::istream *in_stream, const unsigned int n_threads); 
+    
+    // Returns two vectors, containing chromosome names and lengths
     int obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens);
 
-    size_t GetFileSize() { return(IS_LENGTH); };
-
+    /* 
+      Reads the BAM file, decompressing to a maximum either by the data buffer cap,
+        or the file chunk size (file_buf_cap / chunks_per_file_buf).
+      Then assigns read cursors to point to the locations of reads to begin reading
+        by each thread.
+    */
     int fillReads();  // Returns 1 if no more reads available
     
-    // Read functions:
-    pbam1_t supplyRead(unsigned int thread_number = 0);
+    /* 
+      Returns a pbam1_t of the next read to be returned by thread (as specified by thread_number).
+      - thread_number must be between [0, n_threads - 1].
+      - If there are no more reads in the thread, returns an empty read which will
+        return false using pbam1_t::validate()
+    */
+    pbam1_t supplyRead(const unsigned int thread_number = 0);
     
-    // Progress functions:
+    // Returns the size of the opened BAM
+    size_t GetFileSize() { return(IS_LENGTH); };
+
+    // Returns the number of bytes decompressed
     size_t GetProgress() {return(prog_tellg());};
+    
+    // Returns the incremental number of bytes decompressed since the last call to IncProgress()
     size_t IncProgress() {
       size_t INC = prog_tellg() - PROGRESS;
       PROGRESS = prog_tellg();
@@ -134,11 +198,11 @@ inline pbam_in::pbam_in() {
   IN = NULL;
 }
 
-inline pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int file_buffer_segments) {
+inline pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int chunks_per_file_buf) {
   initialize_buffers();
   
-  if(file_buffer_cap / file_buffer_segments < 1024576) {
-    Rcout << "FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS (chunk size) must be above 1Mb\n";
+  if(file_buffer_cap / chunks_per_file_buf < 1024576) {
+    Rcout << "FILE_BUFFER_CAP / chunks_per_file_buf (chunk size) must be above 1Mb\n";
     return;
   }
   if(data_buffer_cap < file_buffer_cap) {
@@ -148,7 +212,7 @@ inline pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned
 
   FILE_BUFFER_CAP = file_buffer_cap;
   DATA_BUFFER_CAP = data_buffer_cap;
-  FILE_BUFFER_SEGMENTS = file_buffer_segments;
+  chunks_per_file_buf = chunks_per_file_buf;
   threads_to_use = 1;
 }
 
@@ -198,7 +262,7 @@ inline int pbam_in::swap_file_buffer_if_needed() {
   // Transfers residual data from current file buffer to the next:
   // Rcout << "swap_file_buffer_if_needed()\n";
   if(next_file_buf_cap == 0) return(1);
-  size_t chunk_size = (size_t)(FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS);
+  size_t chunk_size = (size_t)(FILE_BUFFER_CAP / chunks_per_file_buf);
   if(file_buf_cap  - file_buf_cursor > chunk_size) return(1);
   
   char * file_tmp;
@@ -246,7 +310,7 @@ inline int pbam_in::swap_file_buffer_if_needed() {
 }
 
 
-inline size_t pbam_in::load_from_file(size_t n_bytes) {
+inline size_t pbam_in::load_from_file(const size_t n_bytes) {
   /*  
     Read from file to fill n_bytes of file_buf
     First removes data upstream of file cursor
@@ -287,7 +351,7 @@ inline size_t pbam_in::fill_file_buffer() {
   return(load_from_file(FILE_BUFFER_CAP));
 }
 
-inline size_t pbam_in::read_file_chunk_to_spare_buffer(size_t n_bytes) {
+inline size_t pbam_in::read_file_chunk_to_spare_buffer(const size_t n_bytes) {
   // Read from file to fill n_bytes of next_file_buf
   if(n_bytes <= next_file_buf_cap) return(0);
   if(FILE_BUFFER_CAP <= next_file_buf_cap) return(0);
@@ -307,7 +371,7 @@ inline size_t pbam_in::read_file_chunk_to_spare_buffer(size_t n_bytes) {
   return(n_bytes_to_read);
 }
 
-inline int pbam_in::clean_data_buffer(size_t n_bytes_to_decompress) {
+inline int pbam_in::clean_data_buffer(const size_t n_bytes_to_decompress) {
   // Remove residual bytes to beginning of buffer:
   // Rcout << "clean_data_buffer\n";
   char * data_tmp;
@@ -333,12 +397,12 @@ inline int pbam_in::clean_data_buffer(size_t n_bytes_to_decompress) {
   return(0);
 }
 
-inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
+inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
 /*
   Wipes all data behind data_buf_cursor
-  If file_buf data remaining is below residual (FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS)
+  If file_buf data remaining is below residual (FILE_BUFFER_CAP / chunks_per_file_buf)
     then runs swap_file_buffer
-  If file_buf_cursor / FILE_BUFFER_SEGMENTS > next_file_buf_cap / FILE_BUFFER_SEGMENTS
+  If file_buf_cursor / chunks_per_file_buf > next_file_buf_cap / chunks_per_file_buf
     then runs read_file_chunk_to_spare_buffer
   Decompresses any data in file_buf to fill up to n_bytes_to_decompress in data_buf
 */
@@ -352,7 +416,7 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
 
 // Check if file buffer needs filling
   size_t spare_bytes_to_fill = 0;
-  size_t chunk_size = (size_t)(FILE_BUFFER_CAP / FILE_BUFFER_SEGMENTS);
+  size_t chunk_size = (size_t)(FILE_BUFFER_CAP / chunks_per_file_buf);
   if(!eof()) {
     // If asking to decompress a large amount of data:
     if(next_file_buf_cap == 0) {
@@ -585,7 +649,7 @@ inline size_t pbam_in::decompress(size_t n_bytes_to_decompress) {
   return(dest_cursor);
 }
 
-inline unsigned int pbam_in::read(char * dest, unsigned int len) {
+inline unsigned int pbam_in::read(char * dest, const unsigned int len) {
   // Reads bytes from the current data_buf, increments data_buff_cursor
   if(data_buf_cap - data_buf_cursor < len) {
     decompress(len + 65536);
@@ -599,7 +663,7 @@ inline unsigned int pbam_in::read(char * dest, unsigned int len) {
   return(n_bytes_to_read); 
 }
 
-inline unsigned int pbam_in::ignore(unsigned int len) {
+inline unsigned int pbam_in::ignore(const unsigned int len) {
   // Ignores bytes from the current data_buf, increments data_buff_cursor
   if(data_buf_cap - data_buf_cursor < len) {
     decompress(len + 65536);
@@ -612,7 +676,7 @@ inline unsigned int pbam_in::ignore(unsigned int len) {
   return(n_bytes_to_read); 
 }
 
-inline unsigned int pbam_in::peek(char * dest, unsigned int len) {
+inline unsigned int pbam_in::peek(char * dest, const unsigned int len) {
   // Peeks at bytes from the current data_buf, does not increment data_buff_cursor
   if(data_buf_cap - data_buf_cursor < len) {
     decompress(len + 65536);
@@ -766,7 +830,7 @@ inline int pbam_in::fillReads() {
   return(0);
 }
 
-inline pbam1_t pbam_in::supplyRead(unsigned int thread_number) {
+inline pbam1_t pbam_in::supplyRead(const unsigned int thread_number) {
   pbam1_t read;
   if(thread_number > read_cursors.size()) {
     Rcout << "Invalid thread number parsed to supplyRead()\n";

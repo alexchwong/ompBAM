@@ -21,5 +21,10 @@ using namespace Rcpp;
 #include "pbam1_t.hpp"
 #include "pbam_in.hpp"
 
+inline void paraBAM_version() {
+  std::string version = "0.1.0";
+  Rcout << "Compiled using ParaBAM version " << version << "\n";
+}
+
 #endif
 
