@@ -1,12 +1,14 @@
 Package: ParaBAMExample
 Type: Package
-Title: Example use of the ParaBAM package
-Version: 0.2
+Title: Example use of the ParaBAM package. 
+Description: The example source code in src/main.cpp reproduces the samtools 
+    idxstats function but works on un-indexed BAM files using multi-threaded
+    input powered by OpenMP.
+Version: 0.98.0
 Date: 2021-05-31
 Authors@R: c(person("Alex Chit Hei", "Wong", email="a.wong@centenary.org.au", 
 		role=c("aut", "cre", "cph")))   
 Maintainer: Alex Wong <a.wong@centenary.org.au>
-Description: Example use of the ParaBAM package in a package
 License: MIT
 Depends: R (>= 4.0.0)
 Imports: Rcpp (>= 1.0.5)
