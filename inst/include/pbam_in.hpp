@@ -106,7 +106,8 @@ class pbam_in {
     // Creates pbam_in using default values
     pbam_in();
     // Creates a pbam_in with custom caps on file and data buffer sizes, as well as chunks per file
-    pbam_in(const size_t file_buffer_cap, const size_t data_buffer_cap, const unsigned int chunks_per_file_buf);
+    pbam_in(const size_t file_buffer_cap, const size_t data_buffer_cap, 
+      const unsigned int chunks_per_file_buffer);
     
     ~pbam_in();
 
@@ -198,7 +199,10 @@ inline pbam_in::pbam_in() {
   IN = NULL;
 }
 
-inline pbam_in::pbam_in(size_t file_buffer_cap, size_t data_buffer_cap, unsigned int chunks_per_file_buf) {
+inline pbam_in::pbam_in(
+  size_t file_buffer_cap, size_t data_buffer_cap, 
+  unsigned int chunks_per_file_buffer
+) {
   initialize_buffers();
   
   if(file_buffer_cap / chunks_per_file_buf < 1024576) {
