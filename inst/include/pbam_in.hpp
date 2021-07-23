@@ -205,8 +205,8 @@ inline pbam_in::pbam_in(
 ) {
   initialize_buffers();
   
-  if(file_buffer_cap / chunks_per_file_buf < 1024576) {
-    Rcout << "FILE_BUFFER_CAP / chunks_per_file_buf (chunk size) must be above 1Mb\n";
+  if(file_buffer_cap / chunks_per_file_buffer < 1024576) {
+    Rcout << "FILE_BUFFER_CAP / chunks_per_file_buffer (chunk size) must be above 1Mb\n";
     return;
   }
   if(data_buffer_cap < file_buffer_cap) {
@@ -216,7 +216,7 @@ inline pbam_in::pbam_in(
 
   FILE_BUFFER_CAP = file_buffer_cap;
   DATA_BUFFER_CAP = data_buffer_cap;
-  chunks_per_file_buf = chunks_per_file_buf;
+  chunks_per_file_buf = chunks_per_file_buffer;
   threads_to_use = 1;
 }
 
