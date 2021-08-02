@@ -5,9 +5,69 @@
   Class Description
 */
 class pbam_in {
+  public:
+    // Creates pbam_in using default values
+    pbam_in();
+    
+    // Creates a pbam_in with custom caps on file and data buffer sizes, 
+    // as well as chunks per file
+    pbam_in(
+      const size_t file_buffer_cap, 
+      const size_t data_buffer_cap, 
+      const unsigned int chunks_per_file_buffer
+    );
+    
+    ~pbam_in();
+
+    /*
+      Assign a ifstream handle to pbam_in; declares number of threads to use.
+      in_stream must point to an ifstream that has opened a BAM file in binary mode
+      Additionally, this function reads the BAM header.
+    */
+    int SetInputHandle(std::istream *in_stream, const unsigned int n_threads); 
+    
+    // Returns two vectors, containing chromosome names and lengths
+    int obtainChrs(
+      std::vector<std::string> & s_chr_names, 
+      std::vector<uint32_t> & u32_chr_lens
+    );
+
+    /* 
+      Reads the BAM file, decompressing to a maximum either by the data buffer cap,
+        or the file chunk size (file_buf_cap / chunks_per_file_buf).
+      Then assigns read cursors to point to the locations of reads to begin reading
+        by each thread.
+    */
+    int fillReads();  // Returns 1 if no more reads available
+    
+    /* 
+      Returns a pbam1_t of the next read to be returned by thread 
+        (as specified by thread_number).
+      - thread_number must be between [0, n_threads - 1].
+      - If there are no more reads in the thread, returns an empty read which will
+        return false using pbam1_t::validate()
+    */
+    pbam1_t supplyRead(const unsigned int thread_number = 0);
+    
+    // Returns the size of the opened BAM
+    size_t GetFileSize() { return(IS_LENGTH); };
+
+    // Returns the number of bytes decompressed
+    size_t GetProgress() {return(prog_tellg());};
+    
+    /* 
+      Returns the incremental number of bytes decompressed since the last call 
+      to IncProgress()
+    */
+    size_t IncProgress() {
+      size_t INC = prog_tellg() - PROGRESS;
+      PROGRESS = prog_tellg();
+      return(INC);
+    };
+
   private:
 // pbam_in Settings
-    size_t          FILE_BUFFER_CAP       = 200000000;      // 1e8
+    size_t          FILE_BUFFER_CAP       = 200000000;      // 2e8
     size_t          DATA_BUFFER_CAP       = 1000000000;     // 1e9
     unsigned int    chunks_per_file_buf  = 5;             // Divide file buffer into n segments
     unsigned int    threads_to_use        = 1;
@@ -101,54 +161,6 @@ class pbam_in {
 // Disable copy construction / assignment (doing so triggers compile errors)
     pbam_in(const pbam_in &t);
     pbam_in & operator = (const pbam_in &t);
-    
-  public:
-    // Creates pbam_in using default values
-    pbam_in();
-    // Creates a pbam_in with custom caps on file and data buffer sizes, as well as chunks per file
-    pbam_in(const size_t file_buffer_cap, const size_t data_buffer_cap, 
-      const unsigned int chunks_per_file_buffer);
-    
-    ~pbam_in();
-
-    /*
-      Assign a ifstream handle to pbam_in; declares number of threads to use.
-      in_stream must point to an ifstream that has opened a BAM file in binary mode
-      Additionally, this function reads the BAM header.
-    */
-    int SetInputHandle(std::istream *in_stream, const unsigned int n_threads); 
-    
-    // Returns two vectors, containing chromosome names and lengths
-    int obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens);
-
-    /* 
-      Reads the BAM file, decompressing to a maximum either by the data buffer cap,
-        or the file chunk size (file_buf_cap / chunks_per_file_buf).
-      Then assigns read cursors to point to the locations of reads to begin reading
-        by each thread.
-    */
-    int fillReads();  // Returns 1 if no more reads available
-    
-    /* 
-      Returns a pbam1_t of the next read to be returned by thread (as specified by thread_number).
-      - thread_number must be between [0, n_threads - 1].
-      - If there are no more reads in the thread, returns an empty read which will
-        return false using pbam1_t::validate()
-    */
-    pbam1_t supplyRead(const unsigned int thread_number = 0);
-    
-    // Returns the size of the opened BAM
-    size_t GetFileSize() { return(IS_LENGTH); };
-
-    // Returns the number of bytes decompressed
-    size_t GetProgress() {return(prog_tellg());};
-    
-    // Returns the incremental number of bytes decompressed since the last call to IncProgress()
-    size_t IncProgress() {
-      size_t INC = prog_tellg() - PROGRESS;
-      PROGRESS = prog_tellg();
-      return(INC);
-    };
 
 };
 

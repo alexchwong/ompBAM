@@ -9,7 +9,7 @@ Description: C++ header-only library for developers wishing to write software
     to sequentially process BAM files. This package has an advantage over
     Rhtslib in that it supports multi-threaded reading of BAM files using
     OpenMP
-License: MIT
+License: MIT + file LICENSE
 Depends:
   R (>= 4.0.0)
 Imports:
