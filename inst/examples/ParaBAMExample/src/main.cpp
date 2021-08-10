@@ -12,30 +12,35 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
 
   unsigned int n_threads_to_really_use;
   #ifdef _OPENMP
-    n_threads_to_really_use = std::max(n_threads_to_use, 1);
+    if(n_threads_to_use > 1) {
+      if(n_threads_to_use > omp_get_max_threads()) {
+        n_threads_to_really_use = omp_get_max_threads();
+      } else {
+        n_threads_to_really_use = n_threads_to_use;
+      }
+    } else {
+      n_threads_to_really_use = 1;
+    }
   #else
     n_threads_to_really_use = 1;
   #endif
 
-  
   std::ifstream inbam_stream;   
   inbam_stream.open(bam_file, std::ios::in | std::ios::binary);
 
-  // File buffer 1 Gb, Data buffer 2 Gb, 10 file chunks per buffer
-  // Buffer usage = 2 * 1 Gb (File + nextFile buffers) + 2Gb (Data buffer)
-  pbam_in inbam((size_t)1000000000, (size_t)2000000000, 5);
+  pbam_in inbam;
   inbam.SetInputHandle(&inbam_stream, n_threads_to_really_use);
   
   std::vector<std::string> s_chr_names;
   std::vector<uint32_t> u32_chr_lens;
-  int ret = inbam.obtainChrs(s_chr_names, u32_chr_lens);
+  int chrom_count = inbam.obtainChrs(s_chr_names, u32_chr_lens);
 
-  if(ret <= 0) {
+  if(chrom_count <= 0) {
     return(-1); // obtainChrs and SetInputHandle already returns relevant error msgs
   }
   
   // Creates a data structure that stores per-chromosome read counts
-  std::vector<uint32_t> total_reads(ret);
+  std::vector<uint32_t> total_reads(chrom_count);
 
   Progress p(inbam.GetFileSize(), verbose);
 
@@ -48,7 +53,7 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
     #endif
     for(unsigned int i = 0; i < n_threads_to_really_use; i++) {
       // Rcout << "Thread " << i << "\n";
-      std::vector<uint32_t> read_counter(ret);
+      std::vector<uint32_t> read_counter(chrom_count);
       pbam1_t read;
       read = inbam.supplyRead(i);
       do {
@@ -64,16 +69,17 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
       #ifdef _OPENMP
       #pragma omp critical
       #endif
-      for(unsigned int j = 0; j < (unsigned int)ret; j++) {
+      for(unsigned int j = 0; j < (unsigned int)chrom_count; j++) {
         total_reads.at(j) += read_counter.at(j);
       }
     }
   }
-
+  p.increment(inbam.IncProgress());
+  
   inbam_stream.close();
 
   Rcout << bam_file << " summary:\n" << "Name\tLength\tNumber of reads\n";
-  for(unsigned int j = 0; j < (unsigned int)ret; j++) {
+  for(unsigned int j = 0; j < (unsigned int)chrom_count; j++) {
     Rcout << s_chr_names.at(j) << '\t' << u32_chr_lens.at(j) << '\t'
       << total_reads.at(j) << '\n';
   }

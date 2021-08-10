@@ -30,10 +30,12 @@ class pbam1_t{
     uint32_t tag_check(const std::string & tag, uint32_t & tag_length, char type);
   public:
     pbam1_t();
-    pbam1_t(char * src, const bool realize = false);    // Returned by nextRead
+    pbam1_t(char * src, const bool realize = false);    // Used by supplyRead
+    
     ~pbam1_t();
-    pbam1_t(const pbam1_t &t);
-    pbam1_t & operator = (const pbam1_t &t);
+    
+    pbam1_t(const pbam1_t &t);                // Copy constructor
+    pbam1_t & operator = (const pbam1_t &t);  // Copy assignment operator
     
     bool validate() const;    // Check if read is a valid data structure
     void realize();

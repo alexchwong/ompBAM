@@ -67,9 +67,9 @@ class pbam_in {
 
   private:
 // pbam_in Settings
-    size_t          FILE_BUFFER_CAP       = 200000000;      // 2e8
-    size_t          DATA_BUFFER_CAP       = 1000000000;     // 1e9
-    unsigned int    chunks_per_file_buf  = 5;             // Divide file buffer into n segments
+    size_t          FILE_BUFFER_CAP       = 2e8;
+    size_t          DATA_BUFFER_CAP       = 1e9;
+    unsigned int    chunks_per_file_buf   = 5;    // Divide file buffer into n segments
     unsigned int    threads_to_use        = 1;
   
 // File particulars
