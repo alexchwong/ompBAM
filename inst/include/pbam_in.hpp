@@ -218,11 +218,11 @@ inline pbam_in::pbam_in(
   initialize_buffers();
   
   if(file_buffer_cap / chunks_per_file_buffer < 1024576) {
-    Rcout << "FILE_BUFFER_CAP / chunks_per_file_buffer (chunk size) must be above 1Mb\n";
+    Rcpp::Rcout << "FILE_BUFFER_CAP / chunks_per_file_buffer (chunk size) must be above 1Mb\n";
     return;
   }
   if(data_buffer_cap < file_buffer_cap) {
-    Rcout << "DATA_BUFFER_CAP must not be smaller than FILE_BUFFER_CAP\n";
+    Rcpp::Rcout << "DATA_BUFFER_CAP must not be smaller than FILE_BUFFER_CAP\n";
     return;
   }  
 
@@ -259,7 +259,7 @@ inline int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threa
   char eof_check[bamEOFlength + 1];
   IN->read(eof_check, bamEOFlength);
   if(strncmp(bamEOF, eof_check, bamEOFlength) != 0) {
-    Rcout << "Error opening BAM - EOF bit corrupt. Perhaps this file is truncated?\n";
+    Rcpp::Rcout << "Error opening BAM - EOF bit corrupt. Perhaps this file is truncated?\n";
     IN = NULL;
     return(-1);
   }
@@ -276,7 +276,7 @@ inline int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threa
 
 inline int pbam_in::swap_file_buffer_if_needed() {
   // Transfers residual data from current file buffer to the next:
-  // Rcout << "swap_file_buffer_if_needed()\n";
+  // Rcpp::Rcout << "swap_file_buffer_if_needed()\n";
   if(next_file_buf_cap == 0) return(1);
   size_t chunk_size = (size_t)(FILE_BUFFER_CAP / chunks_per_file_buf);
   if(file_buf_cap  - file_buf_cursor > chunk_size) return(1);
@@ -332,11 +332,11 @@ inline size_t pbam_in::load_from_file(const size_t n_bytes) {
     First removes data upstream of file cursor
     Then fills buffer to n_bytes
   */
-  // Rcout << "load from file()\n";
+  // Rcpp::Rcout << "load from file()\n";
   char * file_tmp;
   char * residual_data_buffer;
   size_t residual = file_buf_cap-file_buf_cursor;
-  // Rcout << "Residual = " << residual << '\n';
+  // Rcpp::Rcout << "Residual = " << residual << '\n';
   size_t n_bytes_to_load =  std::min( std::max(n_bytes, residual) , FILE_BUFFER_CAP);  // Cap at file buffer
   size_t n_bytes_to_read = std::min(n_bytes_to_load - residual, IS_LENGTH - tellg());
   if(n_bytes_to_read == 0) return(0);
@@ -359,7 +359,7 @@ inline size_t pbam_in::load_from_file(const size_t n_bytes) {
   
   IN->read(file_buf + file_buf_cap, n_bytes_to_read);
   file_buf_cap += n_bytes_to_read;
-  // Rcout << "load from file() finished - n_bytes_to_read = " << n_bytes_to_read << "\n";
+  // Rcpp::Rcout << "load from file() finished - n_bytes_to_read = " << n_bytes_to_read << "\n";
   return(n_bytes_to_read);
 }
 
@@ -389,7 +389,7 @@ inline size_t pbam_in::read_file_chunk_to_spare_buffer(const size_t n_bytes) {
 
 inline int pbam_in::clean_data_buffer(const size_t n_bytes_to_decompress) {
   // Remove residual bytes to beginning of buffer:
-  // Rcout << "clean_data_buffer\n";
+  // Rcpp::Rcout << "clean_data_buffer\n";
   char * data_tmp;
   char * temp_buffer;
   size_t residual = data_buf_cap-data_buf_cursor;
@@ -422,13 +422,13 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
     then runs read_file_chunk_to_spare_buffer
   Decompresses any data in file_buf to fill up to n_bytes_to_decompress in data_buf
 */
-  // Rcout << "decompress\n";
+  // Rcpp::Rcout << "decompress\n";
   clean_data_buffer(n_bytes_to_decompress);
   if(n_bytes_to_decompress < data_buf_cap) return(0);
   
   size_t decomp_cursor = data_buf_cap;  // The cursor to the data buffer to begin adding data
   size_t max_bytes_to_decompress = std::min(n_bytes_to_decompress, DATA_BUFFER_CAP) - decomp_cursor;
-  // Rcout << "data_buf_cap " << data_buf_cap << " n_bytes_to_decompress " << n_bytes_to_decompress << "\n";
+  // Rcpp::Rcout << "data_buf_cap " << data_buf_cap << " n_bytes_to_decompress " << n_bytes_to_decompress << "\n";
 
 // Check if file buffer needs filling
   size_t spare_bytes_to_fill = 0;
@@ -491,7 +491,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
     bgzf_count++;
     
     if(check_gzip_head) {
-      // Rcout << "file_buf_cursor " << file_buf_cursor << " src_cursor " << src_cursor << '\n';
+      // Rcpp::Rcout << "file_buf_cursor " << file_buf_cursor << " src_cursor " << src_cursor << '\n';
       if(strncmp(bamGzipHead, file_buf + file_buf_cursor + src_cursor, bamGzipHeadLength) != 0) {
         break;  // Gzip head corrupt
       } else {
@@ -508,15 +508,15 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
     u32 = (uint32_t*)(file_buf + file_buf_cursor + src_cursor + (*u16+1) - 4);
     if(dest_cursor + *u32 > max_bytes_to_decompress) break;   
     
-    // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << '\n';
+    // Rcpp::Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << '\n';
     src_cursor += *u16 + 1;
     dest_cursor += *u32;
 
   }
-  // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << "done\n";
+  // Rcpp::Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << "done\n";
 
   if(check_gzip_head) {
-    Rcout << "BGZF blocks corrupt\n";
+    Rcpp::Rcout << "BGZF blocks corrupt\n";
     return(0);
   }
 
@@ -529,7 +529,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
   
   // Profile the file and increment until the destination buffer is reached
 
-  // Rcout << "file_buf_cursor = " << file_buf_cursor <<
+  // Rcpp::Rcout << "file_buf_cursor = " << file_buf_cursor <<
     // " file_buf_cap = " << file_buf_cap <<
     // " next_file_buf_cap = " << next_file_buf_cap <<
     // " data_buf_cap = " << data_buf_cap << 
@@ -551,7 +551,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
       dest_bgzf_pos.push_back(decomp_cursor + dest_cursor);
       next_divider = std::min(next_divider + src_divider, src_max);
       threads_accounted_for++;
-      // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << '\n';
+      // Rcpp::Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << '\n';
     }
   }
   
@@ -562,9 +562,9 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
     dest_bgzf_pos.push_back(decomp_cursor + dest_cursor);
     // next_divider = std::min(next_divider + src_divider, src_max);
     threads_accounted_for++;
-    // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << '\n';
+    // Rcpp::Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << '\n';
   }  
-  // Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << "done\n";
+  // Rcpp::Rcout << "src_cursor = " << src_cursor << " dest_cursor = " << dest_cursor << "done\n";
 
   // NB: last src and dest bgzf pos are the end: So always one more bgzf pos than done
   src_bgzf_cap.push_back(file_buf_cursor + src_max);   
@@ -600,7 +600,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
         dest_size = (uint32_t *)(file_buf + thread_src_cursor + *src_size+1 - 4);
 
         if(*dest_size > 0) {
-          // Rcout << thread_src_cursor << "\t" << thread_dest_cursor << '\t' << *src_size+1 << "\t" << *dest_size << '\n';
+          // Rcpp::Rcout << thread_src_cursor << "\t" << thread_dest_cursor << '\t' << *src_size+1 << "\t" << *dest_size << '\n';
           zs = new z_stream;
           zs->zalloc = NULL; zs->zfree = NULL; zs->msg = NULL;
           zs->next_in = (Bytef*)(file_buf + thread_src_cursor + 18);
@@ -610,7 +610,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
 
           int ret = inflateInit2(zs, -15);
           if(ret != Z_OK) {
-            Rcout << "Exception during BAM decompression - inflateInit2() fail: (" << ret << ") \n";
+            Rcpp::Rcout << "Exception during BAM decompression - inflateInit2() fail: (" << ret << ") \n";
               
   #ifdef _OPENMP
   #pragma omp critical
@@ -620,7 +620,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
           if(!error_occurred) {
             ret = inflate(zs, Z_FINISH);
             if(ret != Z_OK && ret != Z_STREAM_END) {
-              Rcout << "Exception during BAM decompression - inflate() fail: (" << ret << ") \n";
+              Rcpp::Rcout << "Exception during BAM decompression - inflate() fail: (" << ret << ") \n";
   #ifdef _OPENMP
   #pragma omp critical
   #endif
@@ -633,7 +633,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
             crc = crc32(crc32(0L, NULL, 0L), 
             (Bytef*)(data_buf + thread_dest_cursor), *dest_size);
             if(*crc_check != crc) {
-              Rcout << "CRC fail during BAM decompression\n";
+              Rcpp::Rcout << "CRC fail during BAM decompression\n";
   #ifdef _OPENMP
   #pragma omp critical
   #endif
@@ -646,7 +646,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
         }
         thread_src_cursor += *src_size + 1;
         thread_dest_cursor += *dest_size;
-// Rcout << "thread_src_cursor = " << thread_src_cursor << " thread_dest_cursor = " << thread_dest_cursor << '\n';
+// Rcpp::Rcout << "thread_src_cursor = " << thread_src_cursor << " thread_dest_cursor = " << thread_dest_cursor << '\n';
 
       }
     }
@@ -654,14 +654,14 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
   }
   
   if(error_occurred) {
-    Rcout << "error_occurred\n";
+    Rcpp::Rcout << "error_occurred\n";
     return(0);
   }
   
   file_buf_cursor = src_bgzf_cap.at(src_bgzf_cap.size() - 1);
   data_buf_cap = dest_bgzf_cap.at(dest_bgzf_cap.size() - 1);
-  // Rcout << "file_buf_cursor = " << file_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
-  // Rcout << "decompress() done\ttellg() = " << tellg() << '\n';
+  // Rcpp::Rcout << "file_buf_cursor = " << file_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
+  // Rcpp::Rcout << "decompress() done\ttellg() = " << tellg() << '\n';
   return(dest_cursor);
 }
 
@@ -673,7 +673,7 @@ inline unsigned int pbam_in::read(char * dest, const unsigned int len) {
   
   unsigned int n_bytes_to_read = std::min((size_t)len, data_buf_cap - data_buf_cursor);
   if(n_bytes_to_read == 0) return(0);
-  // Rcout << n_bytes_to_read << '\n';
+  // Rcpp::Rcout << n_bytes_to_read << '\n';
   memcpy(dest, data_buf + data_buf_cursor, n_bytes_to_read);
   data_buf_cursor += n_bytes_to_read;
   return(n_bytes_to_read); 
@@ -707,14 +707,14 @@ inline unsigned int pbam_in::peek(char * dest, const unsigned int len) {
 
 inline int pbam_in::readHeader() {
   if(magic_header) {
-    Rcout << "Header is already read\n";
+    Rcpp::Rcout << "Header is already read\n";
     return(-1);
   }
   
   magic_header = (char*)malloc(8+1);
   read(magic_header, 8);
   if(strncmp(magic_header, magicstring, 4) != 0) {
-    Rcout << "Invalid BAM magic string\n";
+    Rcpp::Rcout << "Invalid BAM magic string\n";
     free(magic_header); magic_header = NULL;
     return(-1);
   }
@@ -728,14 +728,14 @@ inline int pbam_in::readHeader() {
   read(u32c, 4);
   u32 = (uint32_t *)u32c;
   n_ref = *u32;
-  // Rcout << " n_ref " << n_ref << '\n';
+  // Rcpp::Rcout << " n_ref " << n_ref << '\n';
   char chrom_buffer[1000]; std::string chrName;
   for(unsigned int i = 0; i < n_ref; i++) {
     read(u32c, 4); u32 = (uint32_t *)u32c;
     read(chrom_buffer, *u32);
     chrName = std::string(chrom_buffer, *u32-1);
     chr_names.push_back(chrName);
-    // Rcout << " chr_names " << chrName << '\n';
+    // Rcpp::Rcout << " chr_names " << chrName << '\n';
     read(u32c, 4); u32 = (uint32_t *)u32c;
     chr_lens.push_back(*u32);
   }
@@ -746,11 +746,11 @@ inline int pbam_in::readHeader() {
 
 inline int pbam_in::obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens) {
   if(!magic_header) {
-    Rcout << "Header is not yet read\n";
+    Rcpp::Rcout << "Header is not yet read\n";
     return(-1);
   }
   if(n_ref == 0) {
-    Rcout << "No chromosome names stored. Is pbam_in::readHeader() been run yet?\n";
+    Rcpp::Rcout << "No chromosome names stored. Is pbam_in::readHeader() been run yet?\n";
     return(-1);
   }
   s_chr_names.clear();
@@ -764,14 +764,14 @@ inline int pbam_in::obtainChrs(std::vector<std::string> & s_chr_names, std::vect
 
 inline int pbam_in::fillReads() {
   // Returns -1 if error, and 1 if EOF. Otherwise, returns 0
-  // Rcout << "fillReads()\n";
+  // Rcpp::Rcout << "fillReads()\n";
   // If header not read:
   if(!magic_header) {
-    Rcout << "Header is not yet read\n";
+    Rcpp::Rcout << "Header is not yet read\n";
     return(-1);
   }
   if(n_ref == 0) {
-    Rcout << "No chromosome names stored. Is pbam_in::readHeader() been run yet?\n";
+    Rcpp::Rcout << "No chromosome names stored. Is pbam_in::readHeader() been run yet?\n";
     return(-1);
   }
   
@@ -779,8 +779,8 @@ inline int pbam_in::fillReads() {
   if(read_cursors.size() > 0) {
     for(unsigned int i = 0; i < read_cursors.size(); i++) {
       if(read_cursors.at(i) < read_ptr_ends.at(i)) {
-        Rcout << "Thread " << i << " has reads remaining. Please debug your code ";
-        Rcout << "and make sure all threads clear their reads before filling any more reads\n";
+        Rcpp::Rcout << "Thread " << i << " has reads remaining. Please debug your code ";
+        Rcpp::Rcout << "and make sure all threads clear their reads before filling any more reads\n";
         return(-1);
       }
     }
@@ -791,7 +791,7 @@ inline int pbam_in::fillReads() {
   read_ptr_ends.resize(0);
   
   decompress(DATA_BUFFER_CAP);
-  // Rcout << "Decompress done\n";
+  // Rcpp::Rcout << "Decompress done\n";
   
   uint32_t *u32p;
   if(data_buf_cap - data_buf_cursor < 4) {
@@ -807,8 +807,8 @@ inline int pbam_in::fillReads() {
   size_t data_divider = 1 + ((data_buf_cap - data_buf_cursor) / threads_to_use);
   size_t next_divider = std::min(data_buf_cursor + data_divider, data_buf_cap);
   // Iterates through data buffer aand assigns pointers to beginning of reads
-  // Rcout << "data_buf_cursor = " << data_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
-  // Rcout << "tellg() = " << tellg() << " file_buf_cap = " << file_buf_cap << 
+  // Rcpp::Rcout << "data_buf_cursor = " << data_buf_cursor << " data_buf_cap = " << data_buf_cap << '\n';
+  // Rcpp::Rcout << "tellg() = " << tellg() << " file_buf_cap = " << file_buf_cap << 
     // " file_buf_cursor = " << file_buf_cursor << " next_file_buf_cap = " << next_file_buf_cap << '\n';
   // bool has_reads_left_in_buffer = true;
   read_cursors.push_back(data_buf_cursor);
@@ -829,7 +829,7 @@ inline int pbam_in::fillReads() {
       read_cursors.push_back(data_buf_cursor);
       next_divider = std::min(data_buf_cap, next_divider + data_divider);
       threads_accounted_for++;
-      // Rcout << data_buf_cursor << '\t';
+      // Rcpp::Rcout << data_buf_cursor << '\t';
     }
   }
 
@@ -838,18 +838,18 @@ inline int pbam_in::fillReads() {
     read_cursors.push_back(data_buf_cursor);
     // next_divider = std::max(data_buf_cap, next_divider + data_divider);
     threads_accounted_for++;
-    // Rcout << data_buf_cursor << '\t';
+    // Rcpp::Rcout << data_buf_cursor << '\t';
   }
 
   read_ptr_ends.push_back(data_buf_cursor);
-  // Rcout << data_buf_cursor << '\n';
+  // Rcpp::Rcout << data_buf_cursor << '\n';
   return(0);
 }
 
 inline pbam1_t pbam_in::supplyRead(const unsigned int thread_number) {
   pbam1_t read;
   if(thread_number > read_cursors.size()) {
-    Rcout << "Invalid thread number parsed to supplyRead()\n";
+    Rcpp::Rcout << "Invalid thread number parsed to supplyRead()\n";
     return(read);
   }
   if(read_cursors.at(thread_number) >= read_ptr_ends.at(thread_number)) {

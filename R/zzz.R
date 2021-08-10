@@ -7,7 +7,9 @@
 #' available to developers using Rhtslib.
 #'
 #' @details
-#' 
+#' For a quick start guide and a full list of functionality, refer to
+#' the vignette
+#' \code{vignette("ParaBAM-API-Docs", package = "ParaBAM")}
 #'
 #' @author Alex Chit Hei Wong
 #' 

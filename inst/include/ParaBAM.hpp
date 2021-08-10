@@ -2,6 +2,7 @@
 #define _ParaBAM
 
 #include <fstream>    // std::ifstream
+
 // [[Rcpp::depends(zlibbioc)]]
 #include <zlib.h>
 #include <zconf.h>
@@ -14,7 +15,6 @@
 #endif
 
 #include "Rcpp.h"
-using namespace Rcpp;
 
 #include "pbam_defs.hpp"
 
@@ -23,7 +23,7 @@ using namespace Rcpp;
 
 inline void paraBAM_version() {
   std::string version = "0.1.0";
-  Rcout << "Compiled using ParaBAM version " << version << "\n";
+  Rcpp::Rcout << "Compiled using ParaBAM version " << version << "\n";
 }
 
 #endif

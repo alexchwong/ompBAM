@@ -1,0 +1,97 @@
+---
+title: "ParaBAM-API-Docs"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ParaBAM-API-Docs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(ParaBAM)
+```
+
+# Setting up a new R package to include ParaBAM
+
+There are several simple steps required to set up a new R package that uses
+ParaBAM.
+
+## Making a new Rcpp package
+
+Please follow the steps in the Rcpp vignette to set up a new package that uses 
+Rcpp. This vignette can be accessed by typing the following in the console:
+
+```
+vignette("Rcpp-package", package = "Rcpp")
+```
+
+
+## Dependencies
+
+Now that you have made a new package, you will need to make several tweaks to
+utilise ParaBAM. ParaBAM uses zlib to decompress BAM files. So you must link
+your source code to Rcpp, zlibbioc as well as ParaBAM itself.
+
+Add the following to the DESCRIPTION file:
+
+
+```
+Imports: Rcpp (>= 1.0.5)
+LinkingTo: Rcpp, zlibbioc, ParaBAM
+```
+
+## Makefile
+
+To ensure that your new package will compile and dynamically link to the correct
+libraries, you need a makefile that instructs the compiler to do so.
+
+First, create a new file under the "src" subdirectory and name it "Makevars".
+Add the following code to this file:
+
+```cmake
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS)
+```
+
+For windows installations, you will need a second file in the "src" folder. Make
+a new file called "Makevars.win" and add the following:
+
+```cmake
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) 
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS)
+
+ZLIB_CFLAGS+=$(shell echo 'zlibbioc::pkgconfig("PKG_CFLAGS")'|\
+    "${R_HOME}/bin/R" --vanilla --slave)
+PKG_LIBS+=$(shell echo 'zlibbioc::pkgconfig("PKG_LIBS_shared")' |\
+    "${R_HOME}/bin/R" --vanilla --slave)
+```
+
+This will ensure that the zlib libraries are linked correctly to Windows systems
+
+## OpenMP compatibility
+
+Windows and Linux systems should support OpenMP natively. MacOS, however, does
+not. In order to set up OpenMP for MacOS, we recommend following this
+[guide](https://mac.r-project.org/openmp/). As can be seen, OpenMP for MacOS
+will continue to be a difficult issue. We recommend writing C++ code that
+is compatible for both OpenMP and non-OpenMP systems. For non-OpenMP systems,
+multi-threading can still be implemented via \code{BiocParallel::MulticoreParam}
+but the session memory will be multiplied over the number of cores used.
+
+In C++ code, to check whether OpenMP is installed in a system, use the #ifdef
+and #ifndef directives. An example below:
+
+```cpp
+#ifdef _OPENMP
+  // Add code here for programs compiled with OpenMP
+#else
+  // Add code here for programs not using OpenMP
+#endif
+```

@@ -49,3 +49,4 @@ vignettes/*.pdf
 
 src/*.o
 src/*.dll
+inst/doc
