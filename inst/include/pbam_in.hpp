@@ -207,8 +207,6 @@ inline void pbam_in::clear_buffers() {
 
 inline pbam_in::pbam_in() {
   initialize_buffers();
-  
-  IN = NULL;
 }
 
 inline pbam_in::pbam_in(
@@ -276,7 +274,6 @@ inline int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threa
 
 inline int pbam_in::swap_file_buffer_if_needed() {
   // Transfers residual data from current file buffer to the next:
-  // Rcpp::Rcout << "swap_file_buffer_if_needed()\n";
   if(next_file_buf_cap == 0) return(1);
   size_t chunk_size = (size_t)(FILE_BUFFER_CAP / chunks_per_file_buf);
   if(file_buf_cap  - file_buf_cursor > chunk_size) return(1);
@@ -301,6 +298,7 @@ inline int pbam_in::swap_file_buffer_if_needed() {
   file_buf_cap = residual;
   file_buf_cursor = 0;
   
+  // If next_file_buf fits inside cap, transfer all contents over and free next_file_buf
   if(next_file_buf_cap <= FILE_BUFFER_CAP - file_buf_cap) {
     memcpy(file_buf + file_buf_cap, next_file_buf, next_file_buf_cap);
     file_buf_cap += next_file_buf_cap;
@@ -308,10 +306,11 @@ inline int pbam_in::swap_file_buffer_if_needed() {
     free(next_file_buf); next_file_buf = NULL;
     next_file_buf_cap = 0;
   } else {
+  // copies some data to fill file_buf to the brim
     memcpy(file_buf + file_buf_cap, next_file_buf, FILE_BUFFER_CAP - file_buf_cap);
     file_buf_cap = FILE_BUFFER_CAP;
 
-    // Move data around in secondary buffer:
+    // Move data around in secondary buffer so that it starts at zero:
     size_t residual2 = next_file_buf_cap - (FILE_BUFFER_CAP - residual);
     
     residual_data_buffer = (char*)malloc(residual2 + 1);
@@ -332,11 +331,11 @@ inline size_t pbam_in::load_from_file(const size_t n_bytes) {
     First removes data upstream of file cursor
     Then fills buffer to n_bytes
   */
-  // Rcpp::Rcout << "load from file()\n";
+
   char * file_tmp;
   char * residual_data_buffer;
   size_t residual = file_buf_cap-file_buf_cursor;
-  // Rcpp::Rcout << "Residual = " << residual << '\n';
+
   size_t n_bytes_to_load =  std::min( std::max(n_bytes, residual) , FILE_BUFFER_CAP);  // Cap at file buffer
   size_t n_bytes_to_read = std::min(n_bytes_to_load - residual, IS_LENGTH - tellg());
   if(n_bytes_to_read == 0) return(0);
@@ -358,8 +357,8 @@ inline size_t pbam_in::load_from_file(const size_t n_bytes) {
   file_buf_cap = residual;
   
   IN->read(file_buf + file_buf_cap, n_bytes_to_read);
+
   file_buf_cap += n_bytes_to_read;
-  // Rcpp::Rcout << "load from file() finished - n_bytes_to_read = " << n_bytes_to_read << "\n";
   return(n_bytes_to_read);
 }
 
