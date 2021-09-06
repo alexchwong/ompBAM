@@ -792,6 +792,7 @@ inline int pbam_in::fillReads() {
   decompress(DATA_BUFFER_CAP);
   // Rcpp::Rcout << "Decompress done\n";
   
+  // Check decompressed data contains at least 1 full read
   uint32_t *u32p;
   if(data_buf_cap - data_buf_cursor < 4) {
     return(1);
@@ -813,6 +814,7 @@ inline int pbam_in::fillReads() {
   read_cursors.push_back(data_buf_cursor);
   unsigned int threads_accounted_for = 0;
   while(1) {
+    // Checks remaining data contains at least 1 full read; breaks otherwise
     if(data_buf_cap - data_buf_cursor >= 4) {
       u32p = (uint32_t *)(data_buf + data_buf_cursor);
       if(*u32p + 4 <= data_buf_cap - data_buf_cursor) {
@@ -855,9 +857,8 @@ inline pbam1_t pbam_in::supplyRead(const unsigned int thread_number) {
     return(read);
   }
   read = pbam1_t(data_buf + read_cursors.at(thread_number), false);
-  read_cursors.at(thread_number) += read.block_size() + 4;
+  if(read.validate()) read_cursors.at(thread_number) += read.block_size() + 4;
   return(read);
 }
-
 
 #endif

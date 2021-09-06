@@ -2,7 +2,6 @@
 #define _pbam1_t
 
 struct pbam_core_32{
-  // uint32_t block_size_val;
   int32_t refID;
   int32_t pos;
   uint8_t l_read_name;
@@ -19,9 +18,11 @@ struct pbam_core_32{
 class pbam1_t{
   private:
     char * read_buffer;
-    bool realized;    // set to true if read_buffer is an allocated memory buffer (rather than just a pointer)
+    bool realized;    // set to true if read_buffer is an 
+                      // allocated memory buffer (rather than just a pointer)
     pbam_core_32 * core;
     uint32_t block_size_val;  // assigned on creation. check on validate()
+    uint32_t tag_size_val;  // assigned on creation. check on validate()  
     
     void reset();
     
@@ -38,7 +39,7 @@ class pbam1_t{
     pbam1_t & operator = (const pbam1_t &t);  // Copy assignment operator
     
     bool validate() const;    // Check if read is a valid data structure
-    void realize();
+    int realize();
     bool isReal() const {return(realized);};
     
     // Getters:
@@ -88,42 +89,44 @@ class pbam1_t{
 
 };
 
-// Constructor (empty):
+// ************************** Constructor (empty) ******************************
 inline pbam1_t::pbam1_t() {
   read_buffer = NULL;
   realized = false;
   core = NULL;
-  block_size_val = 0;
+  block_size_val = 0;   tag_size_val = 0;
 }
 
-inline void pbam1_t::reset() {
-  if(read_buffer && realized) {
-    free(read_buffer);
-    read_buffer = NULL;
-  }
-  realized = false;
-  core = NULL;
-  block_size_val = 0;
-}
-
-// Constructor (takes char*, creates virtual read pointing to buffer):
+// ******** Constructor given pointer to buffer; option to realize read ********
 inline pbam1_t::pbam1_t(char * src, bool realize) {
   uint32_t *temp_block_size = (uint32_t *)(src);
   block_size_val = *temp_block_size;
-  if(realize) {
-    read_buffer = (char*)malloc(block_size_val + 1);
-    memcpy(read_buffer, src, block_size_val);
-    core = (pbam_core_32 *)(read_buffer + 4);
-    realized = true;
+  read_buffer = src;
+  // temp assignment to direct buffer
+  core = (pbam_core_32 *)(read_buffer + 4);
+  
+  // Check tag size is zero or positive_sign
+  if(32 + core->l_read_name + core->n_cigar_op * 4 + 
+        core->l_seq + ((core->l_seq + 1) / 2) > block_size_val) {
+    reset();
   } else {
-    read_buffer = src;
-    realized = false;
+    tag_size_val = block_size_val - (32 + 
+        core->l_read_name + core->n_cigar_op * 4 + 
+        core->l_seq + ((core->l_seq + 1) / 2));
+    if(realize) {
+      read_buffer = (char*)malloc(block_size_val + 1);
+      memcpy(read_buffer, src, block_size_val);      
+      realized = true;
+    } else {
+      read_buffer = src;
+      realized = false;
+    }
     core = (pbam_core_32 *)(read_buffer + 4);
+    validate();
   }
-  validate();
 }
 
-// Destructor
+// ********************************* Destructor ********************************
 inline pbam1_t::~pbam1_t() {
   if(read_buffer && realized) {
     free(read_buffer);
@@ -131,10 +134,22 @@ inline pbam1_t::~pbam1_t() {
   }
   realized = false;
   core = NULL;
-  block_size_val = 0;
+  block_size_val = 0;   tag_size_val = 0;
 }
 
-inline void pbam1_t::realize() {
+// *********************************** Reset ***********************************
+inline void pbam1_t::reset() {
+  if(read_buffer && realized) {
+    free(read_buffer);
+    read_buffer = NULL;
+  }
+  realized = false;
+  core = NULL;
+  block_size_val = 0;   tag_size_val = 0;
+}
+
+// ************************ Copies read to real buffer ************************
+inline int pbam1_t::realize() {
   if(validate() && !realized) {
     char *tmp = read_buffer;
     read_buffer = (char*)malloc(block_size_val + 1);
@@ -142,82 +157,95 @@ inline void pbam1_t::realize() {
     core = (pbam_core_32 *)(read_buffer + 4);
     realized = true;
   }
+  if(validate()) {
+    return(0);
+  }
+  return(-1);
 }
 
-// copy constructor
+// ***************************** Copy constructor *****************************
 inline pbam1_t::pbam1_t(const pbam1_t &t) {
-  if(t.isReal() && t.validate()) {
-    read_buffer = (char*)malloc(t.block_size_val + 1);
-    memcpy(read_buffer, t.read_buffer, t.block_size_val);
-    block_size_val = t.block_size_val;
-    core = (pbam_core_32*)(read_buffer + 4);
-    realized = true;
+  if(t.isReal()) {
+    if(t.validate()) {
+      read_buffer = (char*)malloc(t.block_size_val + 1);
+      memcpy(read_buffer, t.read_buffer, t.block_size_val);
+      block_size_val = t.block_size_val;
+      tag_size_val = t.tag_size_val;
+      core = (pbam_core_32*)(read_buffer + 4);
+      realized = true;
+      validate();
+    } else {
+      reset();
+    }    
   } else if(t.validate()) {
     read_buffer = t.read_buffer;
     block_size_val = t.block_size_val;
+    tag_size_val = t.tag_size_val;
     core = (pbam_core_32*)(read_buffer + 4);
     realized = false;
+    validate();
   } else {
     read_buffer = NULL;
     realized = false;
     core = NULL;
-    block_size_val = 0;
+    block_size_val = 0;   tag_size_val = 0;
   }
 }
 
-// copy assignment operator
+// ************************** Copy assignment operator *************************
 inline pbam1_t & pbam1_t::operator = (const pbam1_t &t)
 {
   // Check for self assignment
   if(this != &t) {
-    if(t.isReal() && t.validate()) {
-      read_buffer = (char*)malloc(t.block_size_val + 1);
-      memcpy(read_buffer, t.read_buffer, t.block_size_val);
-      block_size_val = t.block_size_val;
-      core = (pbam_core_32*)(read_buffer + 4);
-      realized = true;
+    if(t.isReal()) {
+      if(t.validate()) {
+        read_buffer = (char*)malloc(t.block_size_val + 1);
+        memcpy(read_buffer, t.read_buffer, t.block_size_val);
+        block_size_val = t.block_size_val;
+        tag_size_val = t.tag_size_val;
+        core = (pbam_core_32*)(read_buffer + 4);
+        realized = true;
+        validate();
+      } else {
+        reset();
+      }    
     } else if(t.validate()) {
       read_buffer = t.read_buffer;
       block_size_val = t.block_size_val;
+      tag_size_val = t.tag_size_val;
       core = (pbam_core_32*)(read_buffer + 4);
       realized = false;
+      validate();
     } else {
       read_buffer = NULL;
       realized = false;
       core = NULL;
-      block_size_val = 0;
+      block_size_val = 0;   tag_size_val = 0;
     }
   }
   return *this;
 }
 
-// validate:
+// ********************************* Validity *********************************
+
 inline bool pbam1_t::validate() const {
-  if(block_size_val < 32 || !core) {
-    // Rcpp::Rcout << "Read invalid - block size less than core\n";
-    return(false);
-  }
-  if(realized) return(true); // Quick validate if read is realized  
+  if(!read_buffer) return(false);
+
   uint32_t *temp_block_size = (uint32_t *)(read_buffer);
-  if(*temp_block_size != block_size_val) {
-    // Rcpp::Rcout << "Read invalid - block size not matching data\n";
-    return(false);
-  }
-  if(
-      (32 + core->l_read_name + 
-        core->n_cigar_op * 4 + 
-        core->l_seq + 
-        ((core->l_seq + 1) / 2)
-      ) > block_size_val
-  ) {
-    Rcpp::Rcout << "Read size invalid - block_size = " << block_size_val
-      << ", l_read_name = " << core->l_read_name
-      << ", n_cigar_op = " << core->n_cigar_op
-      << ", l_seq = " << core->l_seq << '\n';     
-    return(false);
-  }
+  if(*temp_block_size != block_size_val) return(false);
+
+  if(!core) return(false);
+  
+  // Quick hash to check core; assume buffer is valid if core is valid
+  if(tag_size_val != block_size_val - (
+    32 + core->l_read_name + core->n_cigar_op * 4 + 
+        core->l_seq + ((core->l_seq + 1) / 2)
+  )) return(false);
+  
   return(true);
 }
+
+// ********************************* Getters **********************************
 
 inline int32_t pbam1_t::refID() {
   if(validate()) {
