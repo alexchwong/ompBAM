@@ -203,6 +203,7 @@ inline bool pbam1_t::validate() const {
     Rcpp::Rcout << "Read invalid - block size not matching data\n";
     return(false);
   }
+  /*
   if(
       (32 + core->l_read_name + 
         core->n_cigar_op * 4 + 
@@ -216,6 +217,7 @@ inline bool pbam1_t::validate() const {
       << ", l_seq = " << core->l_seq << '\n';     
     return(false);
   }
+  */
   return(true);
 }
 
