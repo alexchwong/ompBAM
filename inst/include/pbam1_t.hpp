@@ -194,16 +194,15 @@ inline pbam1_t & pbam1_t::operator = (const pbam1_t &t)
 // validate:
 inline bool pbam1_t::validate() const {
   if(block_size_val < 32 || !core) {
-    Rcpp::Rcout << "Read invalid - block size less than core\n";
+    // Rcpp::Rcout << "Read invalid - block size less than core\n";
     return(false);
   }
   if(realized) return(true); // Quick validate if read is realized  
   uint32_t *temp_block_size = (uint32_t *)(read_buffer);
   if(*temp_block_size != block_size_val) {
-    Rcpp::Rcout << "Read invalid - block size not matching data\n";
+    // Rcpp::Rcout << "Read invalid - block size not matching data\n";
     return(false);
   }
-  /*
   if(
       (32 + core->l_read_name + 
         core->n_cigar_op * 4 + 
@@ -217,7 +216,6 @@ inline bool pbam1_t::validate() const {
       << ", l_seq = " << core->l_seq << '\n';     
     return(false);
   }
-  */
   return(true);
 }
 
