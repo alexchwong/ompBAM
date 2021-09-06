@@ -208,7 +208,7 @@ inline bool pbam1_t::validate() const {
         ((core->l_seq + 1) / 2)
       ) > block_size_val
   ) {
-    Rcout << "Read size invalid - block_size = " << block_size_val
+    Rcpp::Rcout << "Read size invalid - block_size = " << block_size_val
       << ", l_read_name = " << core->l_read_name
       << ", n_cigar_op = " << core->n_cigar_op
       << ", l_seq = " << core->l_seq << '\n';     
