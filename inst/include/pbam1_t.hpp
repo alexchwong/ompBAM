@@ -193,7 +193,7 @@ inline pbam1_t & pbam1_t::operator = (const pbam1_t &t)
 
 // validate:
 inline bool pbam1_t::validate() const {
-  if(block_size_val < 36 || !core) {
+  if(block_size_val < 32 || !core) {
     return(false);
   }
   if(realized) return(true); // Quick validate if read is realized  
@@ -208,6 +208,10 @@ inline bool pbam1_t::validate() const {
         ((core->l_seq + 1) / 2)
       ) > block_size_val
   ) {
+    Rcout << "Read size invalid - block_size = " << block_size_val
+      << ", l_read_name = " << core->l_read_name
+      << ", n_cigar_op = " << core->n_cigar_op
+      << ", l_seq = " << core->l_seq << '\n';     
     return(false);
   }
   return(true);
