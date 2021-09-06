@@ -202,7 +202,7 @@ inline bool pbam1_t::validate() const {
     return(false);
   }
   if(
-      (36 + core->l_read_name + 
+      (32 + core->l_read_name + 
         core->n_cigar_op * 4 + 
         core->l_seq + 
         ((core->l_seq + 1) / 2)
