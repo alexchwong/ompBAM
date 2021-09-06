@@ -1,5 +1,5 @@
-#ifndef _ParaBAM
-#define _ParaBAM
+#ifndef _ompBAM
+#define _ompBAM
 
 #include <fstream>    // std::ifstream
 
@@ -23,7 +23,7 @@
 
 inline void paraBAM_version() {
   std::string version = "0.1.0";
-  Rcpp::Rcout << "Compiled using ParaBAM version " << version << "\n";
+  Rcpp::Rcout << "Compiled using ompBAM version " << version << "\n";
 }
 
 #endif

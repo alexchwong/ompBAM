@@ -3,16 +3,18 @@
 \docType{package}
 \name{NxtIRF-package}
 \alias{NxtIRF-package}
-\title{ParaBAM: C++ header library for parallel sequential reading
+\title{ompBAM: C++ header library for parallel sequential reading
 of BAM files}
 \description{
-ParaBAM provides a set of tools to facilitate developers to design
+ompBAM provides a set of tools to facilitate developers to design
 Rcpp / C++ based packages to read BAM files in a multi-threaded,
 sequential approach. Currently, a multi-threaded solution is not
 available to developers using Rhtslib.
 }
 \details{
-
+For a quick start guide and a full list of functionality, refer to
+the vignette
+\code{vignette("ompBAM-API-Docs", package = "ompBAM")}
 }
 \author{
 Alex Chit Hei Wong

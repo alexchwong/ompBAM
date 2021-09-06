@@ -1,4 +1,4 @@
-Package: ParaBAM
+Package: ompBAM
 Title: C++ Library for multi-threaded sequential reading of short-read aligned
     sequencing BAM files
 Version: 0.98.0
@@ -8,7 +8,7 @@ Authors@R: c(person("Alex Chit Hei", "Wong", email="a.wong@centenary.org.au",
 Description: C++ header-only library for developers wishing to write software
     to sequentially process BAM files. This package has an advantage over
     Rhtslib in that it supports multi-threaded reading of BAM files using
-    OpenMP
+    OpenMP.
 License: MIT + file LICENSE
 Depends:
   R (>= 4.0.0)
@@ -21,6 +21,6 @@ biocViews: Software, Transcriptomics, RNASeq,
 SystemRequirements: C++11
 Encoding: UTF-8
 RoxygenNote: 7.1.1
-URL: https://github.com/alexchwong/ParaBAM
+URL: https://github.com/alexchwong/ompBAM
 BugReports: https://support.bioconductor.org/
 Config/testthat/edition: 3

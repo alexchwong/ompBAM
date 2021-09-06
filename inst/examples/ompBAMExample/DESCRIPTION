@@ -1,6 +1,6 @@
-Package: ParaBAMExample
+Package: ompBAMExample
 Type: Package
-Title: Example use of the ParaBAM package. 
+Title: Example use of the ompBAM package. 
 Description: The example source code in src/main.cpp reproduces the samtools 
     idxstats function but works on un-indexed BAM files using multi-threaded
     input powered by OpenMP.
@@ -12,5 +12,5 @@ Maintainer: Alex Wong <a.wong@centenary.org.au>
 License: MIT
 Depends: R (>= 4.0.0)
 Imports: Rcpp (>= 1.0.5)
-LinkingTo: Rcpp, zlibbioc, RcppProgress, ParaBAM
+LinkingTo: Rcpp, zlibbioc, RcppProgress, ompBAM
 RoxygenNote: 7.1.1

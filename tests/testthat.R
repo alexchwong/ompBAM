@@ -1,4 +1,4 @@
 library(testthat)
-library(ParaBAM)
+library(ompBAM)
 
-test_check("ParaBAM")
+test_check("ompBAM")

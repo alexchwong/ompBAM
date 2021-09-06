@@ -1,7 +1,7 @@
-#' ParaBAM: C++ header library for parallel sequential reading
+#' ompBAM: C++ header library for parallel sequential reading
 #' of BAM files
 #' 
-#' ParaBAM provides a set of tools to facilitate developers to design
+#' ompBAM provides a set of tools to facilitate developers to design
 #' Rcpp / C++ based packages to read BAM files in a multi-threaded,
 #' sequential approach. Currently, a multi-threaded solution is not
 #' available to developers using Rhtslib.
@@ -9,7 +9,7 @@
 #' @details
 #' For a quick start guide and a full list of functionality, refer to
 #' the vignette
-#' \code{vignette("ParaBAM-API-Docs", package = "ParaBAM")}
+#' \code{vignette("ompBAM-API-Docs", package = "ompBAM")}
 #'
 #' @author Alex Chit Hei Wong
 #' 
@@ -20,26 +20,26 @@
 #' @md
 NULL
 
-#' ParaBAM Example
+#' ompBAM Example
 #'
-#' Installs the ParaBAMExample package included with the ParaBAM package
+#' Installs the ompBAMExample package included with the ompBAM package
 #'
 #' @details
-#' This function installs the ParaBAMExample package located inside
-#' the 'examples' subfolder of ParaBAM.
-#' @param pkg The name of the example package (default "ParaBAMExample")
+#' This function installs the ompBAMExample package located inside
+#' the 'examples' subfolder of ompBAM.
+#' @param pkg The name of the example package (default "ompBAMExample")
 #' @return None.
 #' @examples
 #' # The directory containing the source code is given by the path here
 #' 
-#' print(system.file(file.path('examples', "ParaBAMExample"), 
-#'     package = 'ParaBAM'))
-#' # Install the ParaBAMExample package
+#' print(system.file(file.path('examples', "ompBAMExample"), 
+#'     package = 'ompBAM'))
+#' # Install the ompBAMExample package
 #' 
-#' install_ParaBAM_example()
+#' install_ompBAM_example()
 #' @export
-install_ParaBAM_example <- function(pkg = "ParaBAMExample") {
-    from <- system.file(file.path('examples', pkg), package = 'ParaBAM')
+install_ompBAM_example <- function(pkg = "ompBAMExample") {
+    from <- system.file(file.path('examples', pkg), package = 'ompBAM')
     if(!dir.exists(from)) {
         stop("Invalid example package name")
     }

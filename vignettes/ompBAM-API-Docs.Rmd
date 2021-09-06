@@ -1,10 +1,10 @@
 ---
-title: "ParaBAM-API-Docs"
+title: "ompBAM-API-Docs"
 output:     
   rmarkdown::html_document:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{ParaBAM-API-Docs}
+  %\VignetteIndexEntry{ompBAM-API-Docs}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -16,10 +16,10 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Setting up a new R package to include ParaBAM
+# Setting up a new R package to include ompBAM
 
 There are several simple steps required to set up a new R package that uses
-ParaBAM.
+ompBAM.
 
 ## Making a new Rcpp package
 
@@ -34,15 +34,15 @@ vignette("Rcpp-package", package = "Rcpp")
 ## Dependencies
 
 Now that you have made a new package, you will need to make several tweaks to
-utilise ParaBAM. ParaBAM uses zlib to decompress BAM files. So you must link
-your source code to Rcpp, zlibbioc as well as ParaBAM itself.
+utilise ompBAM. ompBAM uses zlib to decompress BAM files. So you must link
+your source code to Rcpp, zlibbioc as well as ompBAM itself.
 
 Add the following to the DESCRIPTION file:
 
 
 ```
 Imports: Rcpp (>= 1.0.5)
-LinkingTo: Rcpp, zlibbioc, ParaBAM
+LinkingTo: Rcpp, zlibbioc, ompBAM
 ```
 
 ## Makefile
@@ -94,45 +94,45 @@ and #ifndef directives. An example below:
 #endif
 ```
 
-# Writing a simple program based on ParaBAM
+# Writing a simple program based on ompBAM
 
-In this vignette, we will demonstrate how to use ParaBAM to open a BAM file and
+In this vignette, we will demonstrate how to use ompBAM to open a BAM file and
 read its contents in a multi-threaded way. In essence, we will explain 
-step-by-step how the code works in the ParaBAMExample package included with this
+step-by-step how the code works in the ompBAMExample package included with this
 package.
 
-To install the ParaBAMExample package, refer to the following:
+To install the ompBAMExample package, refer to the following:
 
 ```r
-?install_ParaBAM_example
+?install_ompBAM_example
 ```
 
 ## Headers and Includes
 
-To add the ParaBAM header files into your source code (here we refer to 
-"main.cpp") in ParaBAMExample package, start with the following:
+To add the ompBAM header files into your source code (here we refer to 
+"main.cpp") in ompBAMExample package, start with the following:
 
 ```cpp
-// [[Rcpp::depends(ParaBAM)]]
-#include <ParaBAM.hpp>
+// [[Rcpp::depends(ompBAM)]]
+#include <ompBAM.hpp>
 
 #include "Rcpp.h"
 using namespace Rcpp;
 ```
 
-The line #include "Rcpp.h" is probably redundant as ParaBAM.hpp already contains
+The line #include "Rcpp.h" is probably redundant as ompBAM.hpp already contains
 this line, but we include it here for completeness.
 
 ## Adding progress bar functionality
 
-ParaBAMExample also demonstrates how to use a progress bar to visualise the
+ompBAMExample also demonstrates how to use a progress bar to visualise the
 progress in reading the BAM file. To utilise this, we use the RcppProgress
 package from CRAN which provides the requisite header files for these functions.
 
 Be sure to add "RcppProgress" in the "LinkingTo:" line in the DESCRIPTION file:
 
 ```
-LinkingTo: Rcpp, zlibbioc, ParaBAM, RcppProgress
+LinkingTo: Rcpp, zlibbioc, ompBAM, RcppProgress
 ```
 
 Also, add the following to your source code:
@@ -150,9 +150,9 @@ reads mapped to each chromosome. You can read about this function
 [here](http://www.htslib.org/doc/samtools-idxstats.html).
 
 In samtools, idxstats requires a BAM file to be sorted and indexed. Using
-ParaBAM, we read the BAM file sequentially using multiple threads. Thus, we do
+ompBAM, we read the BAM file sequentially using multiple threads. Thus, we do
 not require the BAM file to be sorted and indexed for normal applications using
-ParaBAM.
+ompBAM.
 
 To start the definitions line of the function, include the following:
 
@@ -202,10 +202,10 @@ this:
   #endif
 ```
 
-## Opening a BAM file using ParaBAM
+## Opening a BAM file using ompBAM
 
-ParaBAM uses the standard library <fstream> to read BAM files. <fstream> is
-already included within the ParaBAM headers. To open a BAM file, we must open
+ompBAM uses the standard library <fstream> to read BAM files. <fstream> is
+already included within the ompBAM headers. To open a BAM file, we must open
 it for binary read access as follows:
 
 ```cpp
@@ -241,7 +241,7 @@ a unsigned 32-bit integer vector (u32_chr_lens):
 
 ## Setting up a loop to process BAM reads sequentially
 
-ParaBAM uses two functions, fillReads() and supplyRead(), to read BAM files and
+ompBAM uses two functions, fillReads() and supplyRead(), to read BAM files and
 process the reads. By default, pbam_in uses two file buffer of 200 Mb each, and
 decompresses reads to fill the data buffer (1 Gb). This can be changed in the 
 pbam_in constructor (see advanced features). Calling fillReads() will load two 
@@ -354,7 +354,7 @@ idxstats:
 
 BAM files are very large files (or we wouldn't use multi-threading to read them).
 Sometimes a progress bar is very useful in this regard. We show here how to use
-the RcppProgress functions with ParaBAM to provide a progress bar.
+the RcppProgress functions with ompBAM to provide a progress bar.
 
 pbam_in has two functions that provide data to the RcppProgress progress bar.
 

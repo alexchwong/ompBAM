@@ -4,7 +4,7 @@ load_my_example_pkg <- function(pkg, ...) {
   skip_if(!requireNamespace("devtools", quietly = TRUE),
     message = "Package devtools must be installed to run unit tests.")
 
-  from <- system.file(file.path('examples', pkg), package = 'ParaBAM')
+  from <- system.file(file.path('examples', pkg), package = 'ompBAM')
   dir <- tempfile()
   dir.create(dir)
   file.copy(from, dir, recursive = TRUE)
@@ -19,11 +19,11 @@ get_function_from_pkg <- function(pkg, fun) {
 
 
 test_example <- function(...) {
-  pkg <- 'ParaBAMExample'
+  pkg <- 'ompBAMExample'
   load_my_example_pkg(pkg, ...)
   fun <- get_function_from_pkg(pkg, 'idxstats_pbam')
   
-  bam <- system.file(file.path('extdata', 'THP1.bam'), package = 'ParaBAM')
+  bam <- system.file(file.path('extdata', 'THP1.bam'), package = 'ompBAM')
   
   fun(bam, n_threads_to_use = 2)
 }

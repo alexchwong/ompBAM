@@ -1,5 +1,5 @@
-// [[Rcpp::depends(ParaBAM)]]
-#include <ParaBAM.hpp>
+// [[Rcpp::depends(ompBAM)]]
+#include <ompBAM.hpp>
 
 // [[Rcpp::depends(RcppProgress)]]
 #include <progress.hpp>
