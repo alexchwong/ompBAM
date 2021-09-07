@@ -14,7 +14,8 @@ class pbam_in {
     pbam_in(
       const size_t file_buffer_cap, 
       const size_t data_buffer_cap, 
-      const unsigned int chunks_per_file_buffer
+      const unsigned int chunks_per_file_buffer,
+      const bool read_file_using_multiple_threads = true
     );
     
     ~pbam_in();
@@ -71,6 +72,7 @@ class pbam_in {
     size_t          DATA_BUFFER_CAP       = 1e9;
     unsigned int    chunks_per_file_buf   = 5;    // Divide file buffer into n segments
     unsigned int    threads_to_use        = 1;
+    bool            multiFileRead         = true;
   
 // File particulars
     std::istream    * IN;    
@@ -112,6 +114,8 @@ class pbam_in {
     void            clear_buffers();              // Clears all buffers and re-initialises pbam_in
 
 // *** Internal functions run by decompress() ***
+
+    int             read_file_to_buffer(char * buf, const size_t len);
 
     // Removes all data upstream of data_buf_cursor
     int             clean_data_buffer(const size_t n_bytes_to_decompress);  
@@ -210,8 +214,10 @@ inline pbam_in::pbam_in() {
 }
 
 inline pbam_in::pbam_in(
-  size_t file_buffer_cap, size_t data_buffer_cap, 
-  unsigned int chunks_per_file_buffer
+  const size_t file_buffer_cap, 
+  const size_t data_buffer_cap, 
+  const unsigned int chunks_per_file_buffer,
+  const bool read_file_using_multiple_threads
 ) {
   initialize_buffers();
   
@@ -228,6 +234,7 @@ inline pbam_in::pbam_in(
   DATA_BUFFER_CAP = data_buffer_cap;
   chunks_per_file_buf = chunks_per_file_buffer;
   threads_to_use = 1;
+  multiFileRead = read_file_using_multiple_threads;
 }
 
 inline pbam_in::~pbam_in() {
@@ -324,6 +331,32 @@ inline int pbam_in::swap_file_buffer_if_needed() {
   return(0);
 }
 
+inline int pbam_in::read_file_to_buffer(char * buf, const size_t len) {
+  std::vector<size_t> len_chunks;
+  std::vector<size_t> len_starts;
+  
+  
+  if(multiFileRead && threads_to_use > 1) {
+    // Assign starts and lengths for each thread   
+    size_t cur_len = 0;
+    size_t chunk_div = (len+1) / threads_to_use;
+    for(unsigned int i = 0; i < threads_to_use; i++) {
+      len_starts.push_back( cur_len );
+      len_chunks.push_back( std::min( len - cur_len, chunk_div) );
+      cur_len += len_chunks.at(i);
+    }
+    
+    #ifdef _OPENMP
+    #pragma omp parallel for num_threads(threads_to_use) schedule(static,1)
+    #endif
+    for(unsigned int k = 0; k < threads_to_use; k++) {
+      IN->read(buf, len);
+    }
+  } else {
+    IN->read(buf, len);
+  }
+  return(0);
+}
 
 inline size_t pbam_in::load_from_file(const size_t n_bytes) {
   /*  
@@ -442,6 +475,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
         spare_bytes_to_fill = std::min(chunk_size, IS_LENGTH - (size_t)tellg());
       } else {
         // If only asking for small amount of data, do not use full buffer
+        // This is typically only called when header is read
         load_from_file(max_bytes_to_decompress);
       }
     } else if(next_file_buf_cap > 0) {

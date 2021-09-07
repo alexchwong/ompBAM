@@ -240,7 +240,15 @@ inline bool pbam1_t::validate() const {
   if(tag_size_val != block_size_val - (
     32 + core->l_read_name + core->n_cigar_op * 4 + 
         core->l_seq + ((core->l_seq + 1) / 2)
-  )) return(false);
+  )) {
+    // Attempt to identify which read is causing the fail:
+    std::string read_name_s;
+    char *tmp = (char*)(read_buffer + 36);
+    read_name_s.assign(tmp);
+    Rcpp::Rcout << "Invalid read: " << read_name_s << "\n";
+    return(false);
+  }
+  
   
   return(true);
 }
