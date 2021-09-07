@@ -23,7 +23,7 @@ class pbam_in {
     /*
       Opens a file directly for BAM reading. Supply a file name as a string
     */
-    int openFile(std::string & filename, unsigned int n_threads); 
+    int openFile(std::string filename, unsigned int n_threads); 
     int closeFile();
     
     /*
@@ -298,7 +298,7 @@ inline int pbam_in::check_file() {
   }
 }
 
-inline int pbam_in::openFile(std::string & filename, unsigned int n_threads) {
+inline int pbam_in::openFile(std::string filename, unsigned int n_threads) {
   check_threads(n_threads);
   clear_buffers();
   
@@ -316,7 +316,7 @@ inline int pbam_in::SetInputHandle(std::ifstream *in_stream, unsigned int n_thre
 }
 
 inline int pbam_in::closeFile() {
-  clear_buffers();
+  clear_buffers(); return(0);
 }
 
 inline int pbam_in::swap_file_buffer_if_needed() {
