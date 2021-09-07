@@ -21,11 +21,17 @@ class pbam_in {
     ~pbam_in();
 
     /*
+      Opens a file directly for BAM reading. Supply a file name as a string
+    */
+    int openFile(std::string & filename, unsigned int n_threads); 
+    int closeFile();
+    
+    /*
       Assign a ifstream handle to pbam_in; declares number of threads to use.
       in_stream must point to an ifstream that has opened a BAM file in binary mode
       Additionally, this function reads the BAM header.
     */
-    int SetInputHandle(std::istream *in_stream, const unsigned int n_threads); 
+    int SetInputHandle(std::ifstream *in_stream, const unsigned int n_threads); 
     
     // Returns two vectors, containing chromosome names and lengths
     int obtainChrs(
@@ -73,9 +79,9 @@ class pbam_in {
     unsigned int    chunks_per_file_buf   = 5;    // Divide file buffer into n segments
     unsigned int    threads_to_use        = 1;
     bool            multiFileRead         = true;
-  
+    std::string     FILENAME;
 // File particulars
-    std::istream    * IN;    
+    std::ifstream    * IN;    
     size_t          IS_LENGTH;     // size of BAM file (Input Stream Length)
   
 // Header storage:
@@ -108,6 +114,10 @@ class pbam_in {
     std::vector<size_t>         read_ptr_ends;    // Boundaries of read positions in each thread
 
 // Internal functions
+
+    void            check_threads(unsigned int n_threads_to_check);
+
+    int             check_file();
 
 // *** Initialisers ***
     void            initialize_buffers();         // Initialises a pbam_in
@@ -186,6 +196,11 @@ inline void pbam_in::initialize_buffers() {
 }
 
 inline void pbam_in::clear_buffers() {
+  if(FILENAME.size() > 0 && IN) {
+    IN->close(); // close previous file
+    delete(IN);
+    FILENAME.clear();
+  }
   if(file_buf) free(file_buf); 
   file_buf = NULL;
   if(data_buf) free(data_buf); 
@@ -241,45 +256,67 @@ inline pbam_in::~pbam_in() {
   clear_buffers();
 }
 
-inline int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threads) {
-  Rcpp::Rcout << "\nUsing new ompBAM 21-09-07 10:11am\n";
-
-
+inline void pbam_in::check_threads(unsigned int n_threads_to_check) {
   #ifdef _OPENMP
-    if(n_threads > (unsigned int)omp_get_max_threads()) {
+    if(n_threads_to_check > (unsigned int)omp_get_max_threads()) {
       threads_to_use = (unsigned int)omp_get_max_threads();
     } else {
-      threads_to_use = n_threads;
+      threads_to_use = n_threads_to_check;
     }
   #else
     threads_to_use = 1;
   #endif
-  
-  IN = in_stream;
-  
-  // Assign IS_LENGTH
-  IN->seekg(0, std::ios_base::end);
-  IS_LENGTH = tellg();
-  
-  // Check valid EOF:
-  IN->seekg(IS_LENGTH-bamEOFlength, std::ios_base::beg);
-  
-  char eof_check[bamEOFlength + 1];
-  IN->read(eof_check, bamEOFlength);
-  if(strncmp(bamEOF, eof_check, bamEOFlength) != 0) {
-    Rcpp::Rcout << "Error opening BAM - EOF bit corrupt. Perhaps this file is truncated?\n";
-    IN = NULL;
+}
+
+inline int pbam_in::check_file() {
+  if(IN) {
+    // Assign IS_LENGTH
+    IN->seekg(0, std::ios_base::end);
+    IS_LENGTH = tellg();
+    
+    // Check valid EOF:
+    IN->seekg(IS_LENGTH-bamEOFlength, std::ios_base::beg);
+    
+    char eof_check[bamEOFlength + 1];
+    IN->read(eof_check, bamEOFlength);
+    if(strncmp(bamEOF, eof_check, bamEOFlength) != 0) {
+      Rcpp::Rcout << "Error opening BAM - EOF bit corrupt. Perhaps this file is truncated?\n";
+      IN = NULL;
+      return(-1);
+    }
+    IN->clear(); 
+    IN->seekg(0, std::ios_base::beg);
+    
+    // Read header. If corrupt header, close everything and output error:
+    int ret = readHeader();
+    if(ret != 0) {
+      clear_buffers();
+    }
+    return(ret);
+  } else {
     return(-1);
   }
-  IN->clear(); 
-  IN->seekg(0, std::ios_base::beg);
+}
+
+inline int pbam_in::openFile(std::string & filename, unsigned int n_threads) {
+  check_threads(n_threads);
+  clear_buffers();
   
-  // Read header. If corrupt header, close everything and output error:
-  int ret = readHeader();
-  if(ret != 0) {
-    clear_buffers();
-  }
-  return(ret);
+  IN = new std::ifstream;
+  FILENAME = filename;
+  IN->open(filename, std::ios::in | std::ifstream::binary);
+  return(check_file());
+}
+
+inline int pbam_in::SetInputHandle(std::ifstream *in_stream, unsigned int n_threads) {
+  check_threads(n_threads);
+  
+  IN = in_stream;
+  return(check_file());
+}
+
+inline int pbam_in::closeFile() {
+  clear_buffers();
 }
 
 inline int pbam_in::swap_file_buffer_if_needed() {

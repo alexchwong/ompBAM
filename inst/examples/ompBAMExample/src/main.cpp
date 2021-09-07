@@ -25,11 +25,12 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
     n_threads_to_really_use = 1;
   #endif
 
-  std::ifstream inbam_stream;   
-  inbam_stream.open(bam_file, std::ios::in | std::ios::binary);
+  // std::ifstream inbam_stream;   
+  // inbam_stream.open(bam_file, std::ios::in | std::ios::binary);
 
   pbam_in inbam;
-  inbam.SetInputHandle(&inbam_stream, n_threads_to_really_use);
+  // inbam.SetInputHandle(&inbam_stream, n_threads_to_really_use);
+  inbam.openFile(bam_file, n_threads_to_really_use);
   
   std::vector<std::string> s_chr_names;
   std::vector<uint32_t> u32_chr_lens;
@@ -76,7 +77,7 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
   }
   p.increment(inbam.IncProgress());
   
-  inbam_stream.close();
+  // inbam_stream.close();
 
   Rcout << bam_file << " summary:\n" << "Name\tLength\tNumber of reads\n";
   for(unsigned int j = 0; j < (unsigned int)chrom_count; j++) {
