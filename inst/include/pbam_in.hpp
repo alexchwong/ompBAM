@@ -167,7 +167,7 @@ class pbam_in {
         - next_file_buf_cap
     ); };
     
-    bool eof() {return(IS_LENGTH == tellg());};       // Returns whether end of file is reached
+    bool eof() {return(IS_LENGTH <= tellg());};       // Returns whether end of file is reached
     bool fail() {return(IN->fail());};                // Returns any ifstream errors
     
     size_t PROGRESS = 0;    // Value of prog_tellg() when IncProgress() is last called
@@ -375,22 +375,32 @@ inline int pbam_in::read_file_to_buffer(char * buf, const size_t len) {
   std::vector<size_t> len_chunks;
   std::vector<size_t> len_starts;
   
-  
-  if(multiFileRead && threads_to_use > 1) {
+  if(multiFileRead && threads_to_use > 1 && FILENAME.size() > 0) {
     // Assign starts and lengths for each thread   
     size_t cur_len = 0;
     size_t chunk_div = (len+1) / threads_to_use;
     for(unsigned int i = 0; i < threads_to_use; i++) {
+      // Rcpp::Rcout << "thread " << i << ", file pos " << cur_len << '\n';
       len_starts.push_back( cur_len );
       len_chunks.push_back( std::min( len - cur_len, chunk_div) );
       cur_len += len_chunks.at(i);
     }
-    
+    if(cur_len < len) {
+      len_chunks.at(threads_to_use - 1) = len - len_starts.at(threads_to_use - 1);
+    }
+    // Spawn child ifstreams
+    std::vector<std::ifstream> INchild(threads_to_use);
+    const size_t cur_pos = (size_t)tellg();
+    IN->seekg(len, std::ios_base::cur);
+
     #ifdef _OPENMP
     #pragma omp parallel for num_threads(threads_to_use) schedule(static,1)
     #endif
     for(unsigned int k = 0; k < threads_to_use; k++) {
-      IN->read(buf, len);
+      INchild.at(k).open(FILENAME, std::ios::in | std::ifstream::binary);
+      INchild.at(k).seekg(cur_pos + len_starts.at(k), std::ios_base::beg);
+      INchild.at(k).read(buf + len_starts.at(k), len_chunks.at(k));
+      INchild.at(k).close();
     }
   } else {
     IN->read(buf, len);
@@ -412,7 +422,7 @@ inline size_t pbam_in::load_from_file(const size_t n_bytes) {
   size_t n_bytes_to_load =  std::min( std::max(n_bytes, residual) , FILE_BUFFER_CAP);  // Cap at file buffer
   size_t n_bytes_to_read = std::min(n_bytes_to_load - residual, IS_LENGTH - tellg());
   if(n_bytes_to_read == 0) return(0);
-  
+  // Rcpp::Rcout << "\nload_from file: n_bytes_to_read = " << n_bytes_to_read << '\n';
   // Remove residual bytes to beginning of buffer:
   if(residual > 0) {
     // have to move bytes around
@@ -429,7 +439,8 @@ inline size_t pbam_in::load_from_file(const size_t n_bytes) {
   file_buf_cursor = 0;
   file_buf_cap = residual;
   
-  IN->read(file_buf + file_buf_cap, n_bytes_to_read);
+  // IN->read(file_buf + file_buf_cap, n_bytes_to_read);
+  read_file_to_buffer(file_buf + file_buf_cap, n_bytes_to_read);
 
   file_buf_cap += n_bytes_to_read;
   return(n_bytes_to_read);
@@ -454,7 +465,9 @@ inline size_t pbam_in::read_file_chunk_to_spare_buffer(const size_t n_bytes) {
     next_file_buf = (char*)realloc(file_tmp = next_file_buf, FILE_BUFFER_CAP + 1);
   }
   
-  IN->read(next_file_buf + next_file_buf_cap, n_bytes_to_read);
+  // IN->read(next_file_buf + next_file_buf_cap, n_bytes_to_read);
+  read_file_to_buffer(next_file_buf + next_file_buf_cap, n_bytes_to_read);
+  
   next_file_buf_cap += n_bytes_to_read;
   return(n_bytes_to_read);
 }
@@ -534,9 +547,10 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
     if(file_buf_cap == file_buf_cursor) return(0);
   }
 
+  // Set decomp_threads = threads_to_use - 1 to use asynchronous file reading
   unsigned int decomp_threads = threads_to_use;
   if(spare_bytes_to_fill > 0) {
-    if(decomp_threads > 1) {
+    if(decomp_threads > 1 && !multiFileRead) {
         decomp_threads--;
     } else {
       read_file_chunk_to_spare_buffer(spare_bytes_to_fill);
