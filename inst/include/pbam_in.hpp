@@ -242,6 +242,9 @@ inline pbam_in::~pbam_in() {
 }
 
 inline int pbam_in::SetInputHandle(std::istream *in_stream, unsigned int n_threads) {
+  Rcpp::Rcout << "\nUsing new ompBAM 21-09-07 10:11am\n";
+
+
   #ifdef _OPENMP
     if(n_threads > (unsigned int)omp_get_max_threads()) {
       threads_to_use = (unsigned int)omp_get_max_threads();
