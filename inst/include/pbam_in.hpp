@@ -189,7 +189,8 @@ inline void pbam_in::initialize_buffers() {
   next_file_buf_cap = 0;
   magic_header = NULL; l_text = 0; headertext = NULL; n_ref = 0;
   chr_names.resize(0); chr_lens.resize(0);
-
+  FILENAME.clear();
+  
   read_cursors.resize(0);
   read_ptr_ends.resize(0);
   IN = NULL;
@@ -269,7 +270,7 @@ inline void pbam_in::check_threads(unsigned int n_threads_to_check) {
 }
 
 inline int pbam_in::check_file() {
-  if(IN) {
+  if(!IN->fail()) {
     // Assign IS_LENGTH
     IN->seekg(0, std::ios_base::end);
     IS_LENGTH = tellg();
@@ -302,17 +303,19 @@ inline int pbam_in::openFile(std::string filename, unsigned int n_threads) {
   check_threads(n_threads);
   clear_buffers();
   
-  IN = new std::ifstream;
+  IN = new std::ifstream(filename, std::ios::in | std::ifstream::binary);
   FILENAME = filename;
-  IN->open(filename, std::ios::in | std::ifstream::binary);
-  return(check_file());
+  int ret = check_file();
+  return(ret);
 }
 
 inline int pbam_in::SetInputHandle(std::ifstream *in_stream, unsigned int n_threads) {
   check_threads(n_threads);
+  if(!in_stream) return(-1);
   
   IN = in_stream;
-  return(check_file());
+  int ret = check_file();
+  return(ret);
 }
 
 inline int pbam_in::closeFile() {
