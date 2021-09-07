@@ -4,20 +4,19 @@
 #include <fstream>    // std::ifstream
 
 // [[Rcpp::depends(zlibbioc)]]
-#include <zlib.h>
+#include <zlib.h>     // For BAM decompression
 #include <zconf.h>
 
-#include <cstring>
-#include <vector>
+#include <cstring>    // To compare between strings
+#include <vector>     // For vector types
 
 #ifdef _OPENMP
-  #include <omp.h>
+  #include <omp.h>    // For OpenMP
 #endif
 
-#include "Rcpp.h"
+#include "Rcpp.h"     // For Rcpp::Rcout
 
 #include "pbam_defs.hpp"
-
 #include "pbam1_t.hpp"
 #include "pbam_in.hpp"
 
