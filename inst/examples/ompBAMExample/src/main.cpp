@@ -72,11 +72,33 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
               read.cigar(cigar);
               Rcout << "Cigar: " << cigar << '\n';
               
-              Rcout << "Available tags: ";
               std::vector<std::string> tags;
               read.AvailTags(tags);
               for(unsigned int j = 0; j < tags.size(); j++) {
-                Rcout << tags.at(j) << " ";
+                char type = read.Tag_Type(tags.at(j));
+                std::string Z_val;
+                Rcout << tags.at(j) << ":" << type << ":";
+                switch(read.Tag_Type(tags.at(j))) {
+                  case 'A':
+                    Rcout << read.tagVal_A(tags.at(j)) << '\t'; break; 
+                  case 'c':
+                    Rcout << std::to_string(read.tagVal_c(tags.at(j))) << '\t'; break; 
+                  case 'C':
+                    Rcout << std::to_string(read.tagVal_C(tags.at(j))) << '\t'; break; 
+                  case 's':
+                    Rcout << std::to_string(read.tagVal_s(tags.at(j))) << '\t'; break; 
+                  case 'S':
+                    Rcout << std::to_string(read.tagVal_S(tags.at(j))) << '\t'; break; 
+                  case 'i':
+                    Rcout << std::to_string(read.tagVal_i(tags.at(j))) << '\t'; break; 
+                  case 'I':
+                    Rcout << std::to_string(read.tagVal_I(tags.at(j))) << '\t'; break; 
+                  case 'f':
+                    Rcout << std::to_string(read.tagVal_f(tags.at(j))) << '\t'; break; 
+                  case 'Z':
+                    read.tagVal_Z(tags.at(j), Z_val);
+                    Rcout << Z_val << '\t'; break;
+                }
               }
               
               Rcout << '\n';
