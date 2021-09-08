@@ -25,11 +25,7 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
     n_threads_to_really_use = 1;
   #endif
 
-  // std::ifstream inbam_stream;   
-  // inbam_stream.open(bam_file, std::ios::in | std::ios::binary);
-
   pbam_in inbam;
-  // inbam.SetInputHandle(&inbam_stream, n_threads_to_really_use);
   inbam.openFile(bam_file, n_threads_to_really_use);
   
   std::vector<std::string> s_chr_names;
@@ -44,7 +40,7 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
   std::vector<uint32_t> total_reads(chrom_count);
 
   Progress p(inbam.GetFileSize(), verbose);
-
+  bool report_first_read = false;
   while(0 == inbam.fillReads()) {
     // Rcout << "Reads filled\n";
     p.increment(inbam.IncProgress());
@@ -61,6 +57,34 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
         if(read.validate()) {
           if(read.refID() >= 0) {
             read_counter.at(read.refID())++;
+            
+            // Check read getters
+            if(!report_first_read && i == 0) {
+              std::string read_name;
+              read.read_name(read_name);
+              Rcout << "Read name: " << read_name << '\n';
+              
+              std::string read_seq;
+              read.seq(read_seq);
+              Rcout << "Seq: " << read_seq << '\n';
+
+              std::string cigar;
+              read.cigar(cigar);
+              Rcout << "Cigar: " << cigar << '\n';
+              
+              Rcout << "Available tags: ";
+              std::vector<std::string> tags;
+              read.AvailTags(tags);
+              for(unsigned int j = 0; j < tags.size(); j++) {
+                Rcout << tags.at(j) << " ";
+              }
+              
+              Rcout << '\n';
+              #ifdef _OPENMP
+              #pragma omp critical
+              #endif
+              report_first_read = true;
+            }            
           }
         }
         read = inbam.supplyRead(i);

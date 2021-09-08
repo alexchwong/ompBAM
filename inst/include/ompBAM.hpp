@@ -7,6 +7,7 @@
 #include <zlib.h>     // For BAM decompression
 #include <zconf.h>
 
+#include <string>    
 #include <cstring>    // To compare between strings
 #include <vector>     // For vector types
 
