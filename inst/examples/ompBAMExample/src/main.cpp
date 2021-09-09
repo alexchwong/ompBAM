@@ -72,9 +72,8 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
               std::vector<std::string> tags;
               read.AvailTags(tags);
               for(unsigned int j = 0; j < tags.size(); j++) {
-                char type = read.Tag_Type(tags.at(j));
                 std::string Z_val;
-                Rcout << tags.at(j) << ":" << type << ":";
+                Rcout << tags.at(j) << ":" << read.Tag_Type_SAM(tags.at(j)) << ":";
                 switch(read.Tag_Type(tags.at(j))) {
                   case 'A':
                     Rcout << read.tagVal_A(tags.at(j)) << '\t'; break; 

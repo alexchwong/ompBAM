@@ -18,6 +18,17 @@ inline char pbam1_t::Tag_Type(const std::string tag) {
   return(search_tag_type(tag));
 }
 
+inline char pbam1_t::Tag_Type_SAM(const std::string tag) {
+  char type = search_tag_type(tag);
+  switch(type) {
+    case 'c': case 'C': case 's': case 'S': case 'i': case 'I':
+      return('i');
+    default:
+      return(type);
+  }
+}
+
+
 inline char pbam1_t::Tag_Subtype(const std::string tag) {
   return(search_tag_subtype(tag));
 }

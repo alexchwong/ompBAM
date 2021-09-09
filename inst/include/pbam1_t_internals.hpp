@@ -99,70 +99,55 @@ inline void pbam1_t::build_tag_index() {
     );
     
     pbam_tag_index tag_index_entry;
-    char *type, *subtype, *byte; 
-    uint32_t *b_len, tag_length;
+    char *byte; 
+    uint32_t tag_length;
     
     while(tag_pos < block_size_val + 4) {
       std::string tag_name(read_buffer + tag_pos, 2);
-      
       tag_index_entry.tag_pos = tag_pos;
-      
-      type = read_buffer + tag_pos + 2;
-      tag_index_entry.type = *type;
-      
-      if(*type == 'B') {
-        subtype = read_buffer + tag_pos + 3;
-        tag_index_entry.subtype = *subtype;
+      tag_index_entry.type = *(read_buffer + tag_pos + 2);
+      if(tag_index_entry.type == 'B') {
+        tag_index_entry.subtype = *(read_buffer + tag_pos + 3);
       }
 
       // Calculate tag length
       tag_length = 0;
-      switch(*type) {
-        case 'a': case 'c': case 'C': case 's': case 'S': case 'i': case 'I': case 'f':
+      switch(tag_index_entry.type) {
+        case 'A': case 'c': case 'C': case 's': case 'S': case 'i': case 'I': case 'f':
           tag_length = 1; break;
         case 'Z':
           tag_length = 1;
           byte = read_buffer + tag_pos + 2 + tag_length;
           while(strncmp(&null, byte, 1) != 0) {
             tag_length++; 
-            byte = read_buffer + tag_pos + 2 + tag_length;
+            byte++;
           }
           break;
         case 'B':
-          b_len = (uint32_t*)(read_buffer + tag_pos + 4);
-          tag_length = *b_len; break;
+          tag_length = *((uint32_t*)(read_buffer + tag_pos + 4)); break;
       }
-
       tag_index_entry.tag_length = tag_length;
-      
       tag_index.insert({tag_name, tag_index_entry});
 
       // Increment tag_pos for next entry:
-      switch(*type) {
-        case 'a': case 'c': case 'C':
+      switch(tag_index_entry.type) {
+        case 'A': case 'c': case 'C':
           tag_pos += 4; break;
         case 's': case 'S':
           tag_pos += 5; break;
         case 'i': case 'I': case 'f':
           tag_pos += 7; break;
         case 'Z':
-          tag_pos += 3;
-          byte = read_buffer + tag_pos;
-          while(strncmp(&null, byte, 1) != 0) {
-            tag_pos++; 
-            byte = read_buffer + tag_pos;
-          }
-          tag_pos++; break;
+          tag_pos += 3 + tag_index_entry.tag_length;
+          break;
         case 'B':
-          subtype = read_buffer + tag_pos + 3;
-          b_len = (uint32_t*)(read_buffer + tag_pos + 4);
-          switch(*subtype) {
+          switch(tag_index_entry.subtype) {
             case 'c': case 'C':
-              tag_pos += 8 + *b_len; break;
+              tag_pos += 8 + tag_index_entry.tag_length; break;
             case 's': case 'S':
-              tag_pos += 8 + *b_len * 2; break;
+              tag_pos += 8 + tag_index_entry.tag_length * 2; break;
             case 'i': case 'I': case 'f':
-              tag_pos += 8 + *b_len * 4; break;
+              tag_pos += 8 + tag_index_entry.tag_length * 4; break;
           }
           break;
         default:

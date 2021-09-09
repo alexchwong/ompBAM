@@ -14,8 +14,9 @@ R package. The directory name is assumed to be the package name.}
 None
 }
 \description{
-This function creates a new package (if required), then tunes it to use
-ompBAM. It sets up the requisite dependencies and 'Make files
+This function creates a new package in the given directory (unless one 
+already exists), then creates the necessary changes to run
+ompBAM. It sets up the requisite dependencies and 'Make' files
 so that the source code will successfully compile and link to the appropriate
 external libraries (OpenMP, zlib) required for ompBAM.
 }

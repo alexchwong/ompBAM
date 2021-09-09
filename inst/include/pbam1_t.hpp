@@ -167,6 +167,9 @@ class pbam1_t{
     char Tag_Type(const std::string tag);
     char Tag_Subtype(const std::string tag);
     uint32_t Tag_Size(const std::string tag);
+
+    // Returns the SAM tag type. A = char, i = integer, f = float, Z = string, B = vector
+    char Tag_Type_SAM(const std::string tag);
     
     // Returns raw char pointer to the beginning of the info stored by the tag
     // - For advanced users

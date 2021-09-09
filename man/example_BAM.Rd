@@ -4,27 +4,21 @@
 \alias{example_BAM}
 \title{Returns the path of a test BAM file}
 \usage{
-example_BAM()
+example_BAM(dataset = c("Unsorted", "scRNAseq"))
 }
 \arguments{
-\item{pkg}{The name of the example package (default "ompBAMExample")}
+\item{dataset}{Returns the path to either the "Unsorted" or "scRNAseq" BAM.}
 }
 \value{
-None.
+A file path to the specified BAM file.
 }
 \description{
-Installs the ompBAMExample package included with the ompBAM package
-}
-\details{
-This function installs the ompBAMExample package located inside
-the 'examples' subfolder of ompBAM.
+Two types of BAM files are available. "Unsorted" is an unsorted BAM file of
+paired RNA-seq of THP1 cell culture from Green et al (GSE130011, GSM3729250),
+truncated to the first 10k reads. "scRNAseq" is a single cell 10X chromium V2
+BAM file (sorted). It is sample E3.5_Rep1 from Nowotschin et al 
+(GSE123046 / GSM3494334), truncated to the first 50k reads.
 }
 \examples{
-# The directory containing the source code is given by the path here
-
-print(system.file(file.path('examples', "ompBAMExample"), 
-    package = 'ompBAM'))
-# Install the ompBAMExample package
-
-install_ompBAM_example()
+example_BAM("Unsorted")
 }
