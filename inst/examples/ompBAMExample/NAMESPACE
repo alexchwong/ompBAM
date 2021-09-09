@@ -1,1 +1,2 @@
 useDynLib(ompBAMExample)
+import(ompBAM)

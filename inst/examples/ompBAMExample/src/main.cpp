@@ -7,23 +7,21 @@
 #include "Rcpp.h"
 using namespace Rcpp;
 
+unsigned int use_threads(int n_threads = 1) {
+  #ifdef _OPENMP
+  if(n_threads <= 1) return(1);
+  if(n_threads > omp_get_max_threads()) return((unsigned int)omp_get_max_threads());
+  return((unsigned int)n_threads);
+  #else
+  return(1);
+  #endif
+}
+
 // [[Rcpp::export]]
 int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose = true){
 
-  unsigned int n_threads_to_really_use;
-  #ifdef _OPENMP
-    if(n_threads_to_use > 1) {
-      if(n_threads_to_use > omp_get_max_threads()) {
-        n_threads_to_really_use = omp_get_max_threads();
-      } else {
-        n_threads_to_really_use = n_threads_to_use;
-      }
-    } else {
-      n_threads_to_really_use = 1;
-    }
-  #else
-    n_threads_to_really_use = 1;
-  #endif
+  // Ensure number of threads requested < number of system threads available
+  unsigned int n_threads_to_really_use = use_threads(n_threads_to_use);
 
   pbam_in inbam;
   inbam.openFile(bam_file, n_threads_to_really_use);
@@ -51,8 +49,7 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
     for(unsigned int i = 0; i < n_threads_to_really_use; i++) {
       // Rcout << "Thread " << i << "\n";
       std::vector<uint32_t> read_counter(chrom_count);
-      pbam1_t read;
-      read = inbam.supplyRead(i);
+      pbam1_t read(inbam.supplyRead(i));
       do {
         if(read.validate()) {
           if(read.refID() >= 0) {

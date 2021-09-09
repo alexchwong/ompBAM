@@ -27,6 +27,27 @@ struct pbam_tag_index{
 };
 
 class pbam1_t{
+  private:
+    // Variables
+    char * read_buffer;
+    bool realized = false;
+    pbam_core_32 * core;
+    uint32_t block_size_val; uint32_t tag_size_val;
+    std::map< std::string, pbam_tag_index > tag_index;
+    
+    // Functions
+    void reset();
+    
+    void seq_to_str(const uint8_t val, std::string & dest);
+    char cigar_op_to_char(uint32_t cigar_op);
+    void cigar_to_str(const uint32_t val, std::string & dest);
+    
+    void build_tag_index();
+    
+    char search_tag_type(const std::string tag);
+    char search_tag_subtype(const std::string tag);
+    uint32_t search_tag_pos(const std::string tag);
+    uint32_t search_tag_length(const std::string tag);
   public:
     pbam1_t();
     ~pbam1_t();
@@ -173,33 +194,6 @@ class pbam1_t{
     int tagVal_B(const std::string tag, std::vector<int32_t> & dest);    // 'B, i'
     int tagVal_B(const std::string tag, std::vector<uint32_t> & dest);   // 'B, I'
     int tagVal_B(const std::string tag, std::vector<float> & dest);      // 'B, f'
-
-  private:
-    // Variables
-    char * read_buffer;
-    bool realized;
-    
-    pbam_core_32 * core;
-    
-    // assigned on creation. check on validate()
-    uint32_t block_size_val; uint32_t tag_size_val;
-    
-    std::map< std::string, pbam_tag_index > tag_index;
-    
-    // Functions
-    void reset();
-    
-    void seq_to_str(const uint8_t val, std::string & dest);
-    char cigar_op_to_char(uint32_t cigar_op);
-    void cigar_to_str(const uint32_t val, std::string & dest);
-    
-    void build_tag_index();
-    
-    char search_tag_type(const std::string tag);
-    char search_tag_subtype(const std::string tag);
-    uint32_t search_tag_pos(const std::string tag);
-    uint32_t search_tag_length(const std::string tag);
-
 };
 
 #include "pbam1_t_initializers.hpp"

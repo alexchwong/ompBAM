@@ -176,7 +176,7 @@ inline void pbam1_t::build_tag_index() {
 inline char pbam1_t::search_tag_type(const std::string tag){
   if(tag_size_val == 0) return('\0');
   build_tag_index();
-  auto it = tag_index.find(tag);
+  std::map< std::string, pbam_tag_index >::iterator it = tag_index.find(tag);
   if (it == tag_index.end()) return('\0');
   return(tag_index[tag].type);
 }
@@ -184,7 +184,7 @@ inline char pbam1_t::search_tag_type(const std::string tag){
 inline char pbam1_t::search_tag_subtype(const std::string tag){
   if(tag_size_val == 0) return('\0');
   build_tag_index();
-  auto it = tag_index.find(tag);
+  std::map< std::string, pbam_tag_index >::iterator it = tag_index.find(tag);
   if (it == tag_index.end()) return('\0');
   return(tag_index[tag].subtype);
 }
@@ -192,7 +192,7 @@ inline char pbam1_t::search_tag_subtype(const std::string tag){
 inline uint32_t pbam1_t::search_tag_pos(const std::string tag) {
   if(tag_size_val == 0) return(0);
   build_tag_index();
-  auto it = tag_index.find(tag);
+  std::map< std::string, pbam_tag_index >::iterator it = tag_index.find(tag);
   if (it == tag_index.end()) return(0);
   return(tag_index[tag].tag_pos);
 }
@@ -200,7 +200,7 @@ inline uint32_t pbam1_t::search_tag_pos(const std::string tag) {
 inline uint32_t pbam1_t::search_tag_length(const std::string tag) {
   if(tag_size_val == 0) return(0);
   build_tag_index();
-  auto it = tag_index.find(tag);
+  std::map< std::string, pbam_tag_index >::iterator it = tag_index.find(tag);
   if (it == tag_index.end()) return(0);
   return(tag_index[tag].tag_length);
 }

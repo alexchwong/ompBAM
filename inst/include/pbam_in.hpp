@@ -13,13 +13,13 @@ class pbam_in {
     // as well as chunks per file
     pbam_in(
       const size_t file_buffer_cap, 
-      // Size of each of 2 file buffers for compressed data
+      // Size of each of 2 file buffers for compressed data (default 500 Mb)
       const size_t data_buffer_cap, 
-      // Size of data buffer for decompressed data
+      // Size of data buffer for decompressed data (default 1 Gb)
       const unsigned int chunks_per_file_buffer, 
-      // How many chunks per file buffer
+      // How many chunks per file buffer (default 5)
       const bool read_file_using_multiple_threads = true  
-      // Whether to read threads in multithreaded way
+      // Whether to read threads in multi-threaded way (default true)
     );
     
     ~pbam_in();
@@ -107,7 +107,7 @@ class pbam_in {
 
   private:
 // pbam_in Settings
-    size_t          FILE_BUFFER_CAP       = 2e8;
+    size_t          FILE_BUFFER_CAP       = 5e8;
     size_t          DATA_BUFFER_CAP       = 1e9;
     unsigned int    chunks_per_file_buf   = 5;    // Divide file buffer into n segments
     unsigned int    threads_to_use        = 1;
@@ -349,6 +349,7 @@ inline int pbam_in::check_file() {
       clear_buffers();
     }
     return(ret);
+     // return(0);
   } else {
     return(-1);
   }

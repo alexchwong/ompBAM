@@ -7,7 +7,8 @@
 inline int pbam1_t::AvailTags(std::vector<std::string> & tags) {
   tags.clear();
   build_tag_index();
-  for(auto tagmap = tag_index.begin(); tagmap != tag_index.end(); tagmap++) {
+  for(std::map< std::string, pbam_tag_index >::iterator tagmap = tag_index.begin(); 
+      tagmap != tag_index.end(); tagmap++) {
     tags.push_back(tagmap->first);
   }
   return(tag_index.size());

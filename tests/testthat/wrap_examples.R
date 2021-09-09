@@ -23,7 +23,7 @@ test_example <- function(...) {
   load_my_example_pkg(pkg, ...)
   fun <- get_function_from_pkg(pkg, 'idxstats_pbam')
   
-  bam <- system.file(file.path('extdata', 'THP1.bam'), package = 'ompBAM')
+  bam <- example_BAM()
   
   fun(bam, n_threads_to_use = 2)
 }

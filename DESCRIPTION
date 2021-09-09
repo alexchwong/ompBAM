@@ -1,24 +1,26 @@
 Package: ompBAM
-Title: C++ Library for multi-threaded sequential reading of short-read aligned
-    sequencing BAM files
+Title: C++ Library for OpenMP-based multi-threaded sequential profiling of
+	Binary Alignment Map (BAM) files
 Version: 0.98.0
-Date: 2021-04-22
+Date: 2021-09-09
 Authors@R: c(person("Alex Chit Hei", "Wong", email="a.wong@centenary.org.au", 
 		role=c("aut", "cre", "cph")))    
-Description: C++ header-only library for developers wishing to write software
-    to sequentially process BAM files. This package has an advantage over
-    Rhtslib in that it supports multi-threaded reading of BAM files using
-    OpenMP.
+Description: Although various tools for multi-threaded BAM processing (samtools,
+	sambamba) are available, currently there are none available to the 
+	R/Bioconductor environment. Parallelism in R is achieved using BiocParallel 
+	or related packages. Typical alternatives include processing multiple BAM 
+	files, each using a single core. Although easy to set up, memory-intensive
+	applications limit such approaches. ompBAM is a header-only C++ library 
+	based on OpenMP, allowing developers to implement OpenMP-based parallelism 
+	for the sequential reading of BAM files. ompBAM makes it easy by handling 
+	all the parallel file-access and bgzf decompression, allowing developers to 
+	focus on multi-threaded handling of individual reads.
 License: MIT + file LICENSE
-Depends:
-  R (>= 4.0.0)
-Imports:
-	Rcpp (>= 1.0.5), zlibbioc, devtools
+Imports: Rcpp, zlibbioc, devtools, usethis
 Suggests: 
     RcppProgress, knitr, rmarkdown, testthat (>= 3.0.0)
 VignetteBuilder: knitr
 biocViews: Software, Transcriptomics, RNASeq, 
-SystemRequirements: C++11
 Encoding: UTF-8
 RoxygenNote: 7.1.1
 URL: https://github.com/alexchwong/ompBAM
