@@ -1396,3 +1396,206 @@ Rcpp::Rcout << "The cigar operation at index 0 is " << string(ops.at(0))
             << " and the length to apply this is " << std::to_string(vals.at(0)) << '\n';
 ```
 
+## Getters of Alignment Sequence and Quality score
+
+Reads consist of a sequence of nucleotides. FASTQ files also contain per-
+nucleotide quality scores representing the level of statistical significance
+of each sequenced nucleotide. These values are often stored in BAM files after
+alignment.
+
+#### Usage
+
+```{Rcpp, eval=FALSE}
+uint8_t * seq();  
+char * qual();
+
+int seq(std::string & dest);
+int qual(std::vector<uint8_t> & dest); 
+```
+
+#### Parameters
+
+* `std::string & dest` A string reference to contain the sequence.
+* `std::vector<uint8_t> & dest` A 8-bit unsigned integer vector to contain the
+list of quality scores
+
+#### Return value
+
+`uint8_t * seq()` and `char * qual()` returns the pointer to the raw data
+containing the sequence (in `uint8_t`) and quality scores (in `char`). Advanced
+users will have to convert the 4-bit sequence to nucleotides as described in the
+SAM documentation: [SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf).
+
+It is more convenient to use the latter functions. `int seq(std::string & dest)`
+takes a string reference as parameter and fills this reference with the sequence
+of the read. It returns the length of the read. `qual(std::vector<uint8_t> & dest)`
+takes a `uint8_t` vector by reference and returns with a vector filled with
+quality scores for the sequence.
+
+#### Details
+
+Quality score can take values between [0,93] (without ASCII conversion). Users
+wishing to convert these to ASCII must add +33 to these scores before ASCII
+conversion. Alignments without quality scores will have all QUAL scores set
+at 255 (0xFF).
+
+Also, it is helpful to refer to 
+[SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf) - section
+4.2.3 for further details regarding SEQ and QUAL encoding.
+
+#### Examples
+
+```{Rcpp, eval=FALSE}
+std::string sequence;
+std::vector<uint8_t> qual_scores;
+
+pbam1_t read = inbam.supplyRead(i);
+read.seq(sequence);
+read.qual(qual_scores);
+
+Rcpp::Rcout << "The sequence is " << sequence << " and the quality score of the"
+            << " first nucleotide is " << std::to_string(qual_scores.at(0)) << '\n';
+```
+
+## Tag Getters
+
+Tags are auxiliary information about each read.
+
+#### Usage
+
+```{Rcpp, eval=FALSE}
+int AvailTags(std::vector<std::string> & tags);
+
+char Tag_Type(const std::string tag);
+char Tag_Subtype(const std::string tag);
+uint32_t Tag_Size(const std::string tag);
+char Tag_Type_SAM(const std::string tag);
+
+// Returns raw char pointer to the beginning of the info stored by the tag
+// - For advanced users
+char * p_tagVal(const std::string tag);
+
+// Returns values of fixed length
+// - For tags of type AcCsSiIf
+// Returns '\0' or 0 if fail
+char tagVal_A(const std::string tag);   
+int8_t tagVal_c(const std::string tag);
+uint8_t tagVal_C(const std::string tag);
+int16_t tagVal_s(const std::string tag);
+uint16_t tagVal_S(const std::string tag);
+int32_t tagVal_i(const std::string tag);
+uint32_t tagVal_I(const std::string tag);
+float tagVal_f(const std::string tag);
+
+// Returns a Z-tag by reference to a string. 
+int tagVal_Z(const std::string tag, std::string & dest);    // 'Z'
+
+// Returns a B-tag by reference to its respective type
+// Returns tag length of string if success, -1 if fail
+int tagVal_B(const std::string tag, std::vector<int8_t> & dest);   // 'B, c'
+int tagVal_B(const std::string tag, std::vector<uint8_t> & dest);    // 'B, C'
+int tagVal_B(const std::string tag, std::vector<int16_t> & dest);    // 'B, s'
+int tagVal_B(const std::string tag, std::vector<uint16_t> & dest);   // 'B, S'
+int tagVal_B(const std::string tag, std::vector<int32_t> & dest);    // 'B, i'
+int tagVal_B(const std::string tag, std::vector<uint32_t> & dest);   // 'B, I'
+int tagVal_B(const std::string tag, std::vector<float> & dest);      // 'B, f'
+```
+
+#### Parameters
+
+* `std::vector<std::string> & tags` A reference to a string vector in which to
+store a list of available tags for the read.
+* `const std::string tag` A string containing the two-character tag to query
+* `std::string & dest` A string reference to store the given string in Z-type
+tags.
+* `std::vector<T> & dest A reference to a vector of type <T> in which to store
+the data contained in 'B'-type tags.
+
+#### Return value
+
+* `AvailTags()` returns the number of tags in the read. It also fills the given
+string vector with a list of available tags that can be queried.
+* `Tag_Type()`, `Tag_Subtype()` and `Tag_Size()` returns the type, subtype and
+tag length of the given `tag`. `Tag_Type_SAM()` returns the type as displayed
+in SAM format. See details for further information
+
+* `p_tagVal()` returns the raw pointer to the beginning of the data contained
+within the given tag. That is, the pointer is 3 bytes downstream to the start
+of the tag label in all tags except tags of type 'B', where it is 8 bytes
+downstream of the tag label. See [SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf)
+for more details.
+
+* `tagVal_{A/c/C/s/S/i/I/f}()` returns the 1-length value of the given tag type
+stored in the given `tag`.
+* tagVal_Z() takes by reference a string `dest` in which to store the string
+contained in Z-type tags. It returns the length of the tag if success, or `-1`
+if fail.
+* `tagval_B()` takes by reference a vector `dest` of the appropriate type, in
+which to store the vector of values associated with B-type tags. It returns the 
+length of the tag if success, or `-1` if fails.
+
+#### Details
+
+Tags of type A/c/C/s/S/i/I/f are of length 1. Tags of type Z are of the length 
+of its stored string (including the terminating '\0' byte). Tags of type B are 
+of the length of its vector.
+
+Tag types designate the data type of its stored value. These are 'A' `char`, 
+'c' `int8_t`, 'C' `uint8_t`, 's' `int16_t`, 'S' `uint16_t`, 'i' `int32_t`, 'I'
+`uint32_t`, and 'f' `float`. 
+
+Subtypes only apply to tags of type B. They can be of type c/C/s/S/i/I/f which
+refers to the data type of its stored value (see above).
+
+SAM types are slightly different. Tags of BAM type c/C/s/S/i/I are displayed in
+SAM format as type 'i'. Other types remain as they are.
+
+Note that tags of type 'H' are not supported in ompBAM.
+
+For more details, refer to [SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf),
+section 4.2.4 for more information about how tags are stored in BAM format.
+
+Also, refer to [SAMtags.pdf](https://samtools.github.io/hts-specs/SAMtags.pdf)
+for a list of the commonly-used BAM/SAM tags annotated with their SAM-types and
+the type of information they store.
+
+#### Examples
+
+```{Rcpp, eval=FALSE}
+// The code below iterates through all the tags in the read and prints them in
+// SAM format. B-type tag data is not displayed for brevity of this example.
+
+pbam1_t read = inbam.supplyRead(i);
+
+std:;vector<std::string> tags;
+read.AvailTags(tags);
+
+for(unsigned int j = 0; j < tags.size(); j++) {
+  std::string Z_val;
+  Rcpp::Rcout << tags.at(j) << ":" << read.Tag_Type_SAM(tags.at(j)) << ":";
+  switch(read.Tag_Type(tags.at(j))) {
+    case 'A':
+      Rcpp::Rcout << read.tagVal_A(tags.at(j)) << '\t'; break; 
+    case 'c':
+      Rcpp::Rcout << std::to_string(read.tagVal_c(tags.at(j))) << '\t'; break; 
+    case 'C':
+      Rcpp::Rcout << std::to_string(read.tagVal_C(tags.at(j))) << '\t'; break; 
+    case 's':
+      Rcpp::Rcout << std::to_string(read.tagVal_s(tags.at(j))) << '\t'; break; 
+    case 'S':
+      Rcpp::Rcout << std::to_string(read.tagVal_S(tags.at(j))) << '\t'; break; 
+    case 'i':
+      Rcpp:: << std::to_string(read.tagVal_i(tags.at(j))) << '\t'; break; 
+    case 'I':
+      Rcpp::Rcout << std::to_string(read.tagVal_I(tags.at(j))) << '\t'; break; 
+    case 'f':
+      Rcpp::Rcout << std::to_string(read.tagVal_f(tags.at(j))) << '\t'; break; 
+    case 'Z':
+      read.tagVal_Z(tags.at(j), Z_val);
+      Rcpp::Rcout << Z_val << '\t'; break;
+    case 'B'
+      // write code to store B-type tag in vector of appropriate type
+      break;
+  }
+}
+```
