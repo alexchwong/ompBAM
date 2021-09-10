@@ -18,6 +18,15 @@ inline char pbam1_t::Tag_Type(const std::string tag) {
   return(search_tag_type(tag));
 }
 
+inline char pbam1_t::Tag_Subtype(const std::string tag) {
+  return(search_tag_subtype(tag));
+}
+
+inline uint32_t pbam1_t::Tag_Size(const std::string tag) {
+  return(search_tag_length(tag));
+}
+
+
 inline char pbam1_t::Tag_Type_SAM(const std::string tag) {
   char type = search_tag_type(tag);
   switch(type) {
@@ -28,17 +37,9 @@ inline char pbam1_t::Tag_Type_SAM(const std::string tag) {
   }
 }
 
-
-inline char pbam1_t::Tag_Subtype(const std::string tag) {
-  return(search_tag_subtype(tag));
-}
-
-inline uint32_t pbam1_t::Tag_Size(const std::string tag) {
-  return(search_tag_length(tag));
-}
-
 // Return a char pointer to the raw value contained in the tag
-// - The user should typecast the pointer before obtaining the proper value
+// - The user should typecast the pointer before getting the proper value
+// - for advanced users only
 inline char * pbam1_t::p_tagVal(const std::string tag) {
   if(validate()) {
     char type = search_tag_type(tag);
@@ -57,7 +58,7 @@ inline char * pbam1_t::p_tagVal(const std::string tag) {
 }
 
 inline char pbam1_t::tagVal_A(const std::string tag) {
-  if(validate()) {
+  if(!validate()) {
     if(search_tag_type(tag) == 'A') {
       uint32_t tag_pos = search_tag_pos(tag);
       char * tmp = read_buffer + tag_pos + 3;

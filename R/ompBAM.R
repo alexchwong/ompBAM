@@ -1,16 +1,6 @@
 #' @import zlibbioc
 #' @import Rcpp
-
-UT_check_is_package <- getFromNamespace("check_is_package", "usethis")
-UT_check_uses_roxygen <- getFromNamespace("check_uses_roxygen", "usethis")
-
-UT_use_directory <- getFromNamespace("use_directory", "usethis")
-UT_use_git_ignore <- getFromNamespace("use_git_ignore", "usethis")
-
-UT_use_dependency <- getFromNamespace("use_dependency", "usethis")
-UT_use_src <- getFromNamespace("use_src", "usethis")
-
-UT_roxygen_ns_append <- getFromNamespace("roxygen_ns_append", "usethis")
+NULL
 
 #' ompBAM: C++ header library for parallel sequential reading
 #' of BAM files
@@ -40,58 +30,12 @@ UT_roxygen_ns_append <- getFromNamespace("roxygen_ns_append", "usethis")
 #' @md
 NULL
 
-#' ompBAM Example
-#'
-#' Installs the ompBAMExample package included with the ompBAM package
-#'
-#' @details
-#' This function installs the ompBAMExample package located inside
-#' the 'examples' subfolder of ompBAM.
-#' @param pkg The name of the example package (default "ompBAMExample")
-#' @return None.
-#' @examples
-#' # The directory containing the source code is given by the path here
-#' 
-#' print(system.file(file.path('examples', "ompBAMExample"), 
-#'     package = 'ompBAM'))
-#' # Install the ompBAMExample package
-#' 
-#' install_ompBAM_example()
-#' @export
-install_ompBAM_example <- function(pkg = "ompBAMExample") {
-    from <- system.file(file.path('examples', pkg), package = 'ompBAM')
-    if(!dir.exists(from)) {
-        stop("Invalid example package name")
-    }
-    dir <- tempfile()
-    dir.create(dir)
-    file.copy(from, dir, recursive = TRUE)
-    path <- file.path(dir, pkg)
 
-    devtools::load_all(path, quiet = TRUE)
-}
+# Shortcuts to internal functions from package usethis 
+UT_use_directory <- getFromNamespace("use_directory", "usethis")
+UT_use_git_ignore <- getFromNamespace("use_git_ignore", "usethis")
+UT_use_dependency <- getFromNamespace("use_dependency", "usethis")
 
-#' Returns the path of a test BAM file
-#'
-#' Two types of BAM files are available. "Unsorted" is an unsorted BAM file of
-#' paired RNA-seq of THP1 cell culture from Green et al (GSE130011, GSM3729250),
-#' truncated to the first 10k reads. "scRNAseq" is a single cell 10X chromium V2
-#' BAM file (sorted). It is sample E3.5_Rep1 from Nowotschin et al 
-#' (GSE123046 / GSM3494334), truncated to the first 50k reads.
-#'
-#' @param dataset Returns the path to either the "Unsorted" or "scRNAseq" BAM.
-#' @return A file path to the specified BAM file.
-#' @examples
-#' example_BAM("Unsorted")
-#' @export
-example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
-    dataset = match.arg(dataset)
-    if(dataset == "Unsorted") return(
-        system.file(file.path('extdata', 'THP1_ND_1.bam'), package = 'ompBAM'))
-    if(dataset == "scRNAseq") return(
-        system.file(file.path('extdata', 'MGE_E35_1.bam'), package = 'ompBAM'))
-    stop("dataset must be one of 'Unsorted' or 'scRNAseq'")
-}
 
 #' Sets up the package in the given directory to use ompBAM
 #'
@@ -159,6 +103,65 @@ use_ompBAM <- function(path = ".") {
     
 }
 
+#' ompBAM Example
+#'
+#' Installs the ompBAMExample package included with the ompBAM package
+#'
+#' @details
+#' This function installs the ompBAMExample package located inside
+#' the 'examples' subfolder of ompBAM. It uses devtools::load_all() to simulate
+#' package creation. After running this function to compile ompBAMExample(), 
+#' users can run the example functions contained therein.
+#' @param pkg The name of the example package (default "ompBAMExample")
+#' @return None.
+#' @examples
+#' # The directory containing the source code is given by the path here
+#' 
+#' print(system.file(file.path('examples', "ompBAMExample"), 
+#'     package = 'ompBAM'))
+#' # Install the ompBAMExample package
+#' 
+#' install_ompBAM_example()
+#'
+#' ompBAMExample::idxstats_pbam(example_BAM())
+#' @export
+install_ompBAM_example <- function() {
+    pkg = "ompBAMExample"
+    from <- system.file(file.path('examples', pkg), package = 'ompBAM')
+    if(!dir.exists(from)) {
+        stop("Invalid example package name")
+    }
+    dir <- tempfile()
+    dir.create(dir)
+    file.copy(from, dir, recursive = TRUE)
+    path <- file.path(dir, pkg)
+
+    devtools::load_all(path)
+}
+
+#' Returns the path of a test BAM file
+#'
+#' Two types of BAM files are available. "Unsorted" is an unsorted BAM file of
+#' paired RNA-seq of THP1 cell culture from Green et al (GSE130011, GSM3729250),
+#' truncated to the first 10k reads. "scRNAseq" is a single cell 10X chromium V2
+#' BAM file (sorted). It is sample E3.5_Rep1 from Nowotschin et al 
+#' (GSE123046 / GSM3494334), truncated to the first 50k reads.
+#'
+#' @param dataset Returns the path to either the "Unsorted" or "scRNAseq" BAM.
+#' @return A file path to the specified BAM file.
+#' @examples
+#' example_BAM("Unsorted")
+#' @export
+example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
+    dataset = match.arg(dataset)
+    if(dataset == "Unsorted") return(
+        system.file(file.path('extdata', 'THP1_ND_1.bam'), package = 'ompBAM'))
+    if(dataset == "scRNAseq") return(
+        system.file(file.path('extdata', 'MGE_E35_1.bam'), package = 'ompBAM'))
+    stop("dataset must be one of 'Unsorted' or 'scRNAseq'")
+}
+
+# Sanity checks on provided path for smooth package creation.
 .check_ompBAM_path = function(path) {
     if(!dir.exists(dirname(path))) {
         errormsg = paste(dirname(path), "needs to exist")
@@ -196,3 +199,4 @@ use_ompBAM <- function(path = ".") {
     }
     return(proj_path)
 }
+

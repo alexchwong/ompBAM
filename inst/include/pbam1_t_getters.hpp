@@ -52,6 +52,8 @@ inline int32_t pbam1_t::tlen(){
 }
 
 // This is to accomodate for long reads which may contain >65535 operations
+// For long reads, the cigar is stored as a "CG" tag of type B,I
+// If "CG" tag exists, return its length; otherwise return n_cigar_op
 inline uint32_t pbam1_t::cigar_size(){
   uint32_t size = search_tag_length("CG");
   if(size == 0) return((uint32_t)core->n_cigar_op);
@@ -105,98 +107,91 @@ inline char * pbam1_t::qual() {
 
 inline uint8_t pbam1_t::read_name(std::string & dest) {
   dest.clear();
-  if(validate()) {
-    char *tmp = (char*)(read_buffer + 36);
-    dest.assign(tmp);
-    return(core->l_read_name);
-  }
-  return(0);
+  if(!validate()) return(0);
+  char *tmp = (char*)(read_buffer + 36);
+  dest.assign(tmp);
+  return(core->l_read_name);
 }
 
 inline int pbam1_t::cigar(std::string & dest) {
   dest.clear();
-  if(validate()) {
-    uint32_t *tmp = cigar();
-    uint32_t size = cigar_size();
-    for(unsigned int i = 0; i < size; i++) {
-      cigar_to_str(*tmp, dest);
-      tmp++;
-    }
-    return(size);
+  if(!validate()) return(0);
+  uint32_t *tmp = cigar();
+  uint32_t size = cigar_size();
+  for(unsigned int i = 0; i < size; i++) {
+    cigar_to_str(*tmp, dest);
+    tmp++;
   }
-  return(0);
+  return(size);
 }
 
 inline char pbam1_t::cigar_op(const uint16_t pos) {
+  if(!validate()) return('\0');
   if(pos < cigar_size()) {
     uint32_t *tmp = cigar() + pos;
     return(cigar_op_to_char(*tmp));
-  } else {
-    return('\0');
   }
+  return('\0');
 }
 
 inline uint32_t pbam1_t::cigar_val(const uint16_t pos) {
+  if(!validate()) return(0);
   if(pos < core->n_cigar_op) {
     uint32_t *tmp = cigar() + pos;
     return(*tmp >> 4);
-  } else {
-    return(0);
-  }
-}
-
-inline int pbam1_t::cigar_ops_and_vals(std::vector<char> & ops, std::vector<uint32_t> & vals) {
-  ops.clear();
-  vals.clear();
-  uint32_t size = cigar_size();
-  if(size > 0) {
-    uint32_t *tmp = cigar();
-    for(uint32_t i = 0; i < size; i++) {
-      ops.push_back(cigar_op_to_char(*tmp));
-      vals.push_back(*tmp >> 4);
-      tmp++;
-    }
-    return(size);
   }
   return(0);
+}
+
+inline int pbam1_t::cigar_ops_and_vals(
+  std::vector<char> & ops, std::vector<uint32_t> & vals
+) {
+  ops.clear(); vals.clear();
+  if(!validate()) return(0);
+  uint32_t size = cigar_size();
+  if(size == 0) return(0);
+
+  uint32_t *tmp = cigar();
+  for(uint32_t i = 0; i < size; i++) {
+    ops.push_back(cigar_op_to_char(*tmp));
+    vals.push_back(*tmp >> 4);
+    tmp++;
+  }
+  return(size);
 }
 
 inline int pbam1_t::seq(std::string & dest) {
   dest.clear();
-  if(validate()) {
-    uint8_t *tmp = (uint8_t *)(
-      read_buffer + 36 + core->l_read_name + 
-        sizeof(uint32_t) * core->n_cigar_op);
-    uint8_t val;
-    for(unsigned int i = 0; i < core->l_seq; i++) {
-      if(i % 2 == 0) {
-        val = *tmp >> 4;
-      } else {
-        val = *tmp % 16;
-        tmp++;
-      }
-      seq_to_str(val, dest);
+  if(!validate())  return(0);
+  
+  uint8_t *tmp = (uint8_t *)(
+    read_buffer + 36 + core->l_read_name + sizeof(uint32_t) * core->n_cigar_op);
+  uint8_t val;
+  for(unsigned int i = 0; i < core->l_seq; i++) {
+    if(i % 2 == 0) {
+      val = *tmp >> 4;
+    } else {
+      val = *tmp % 16;
+      tmp++;
     }
-    return(core->l_seq);
+    seq_to_str(val, dest);
   }
-  return(0);
+  return(core->l_seq);
 }
 
 inline int pbam1_t::qual(std::vector<uint8_t> & dest) {
   dest.clear();
-  if(validate()) {
-    uint8_t *tmp = (uint8_t*)(
-      read_buffer + 36 + core->l_read_name + 
-        (sizeof(uint32_t) * core->n_cigar_op) + 
-        ((core->l_seq + 1) / 2)
-    );
-    for(unsigned int i = 0; i < core->l_seq; i++) {
-      dest.push_back(*tmp);
-      tmp++;
-    }
-    return(core->l_seq);
+  if(!validate()) return(0);
+  uint8_t *tmp = (uint8_t*)(
+    read_buffer + 36 + core->l_read_name + 
+      (sizeof(uint32_t) * core->n_cigar_op) + 
+      ((core->l_seq + 1) / 2)
+  );
+  for(unsigned int i = 0; i < core->l_seq; i++) {
+    dest.push_back(*tmp);
+    tmp++;
   }
-  return(0);
+  return(core->l_seq);
 }
 
 #endif

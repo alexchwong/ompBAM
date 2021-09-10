@@ -8,8 +8,11 @@
 // void cigar_to_str(const uint32_t val, std::string & dest);
 
 // void build_tag_index();
-// uint32_t search_tag_pos(const std::string tag, uint32_t & tag_length);
-// uint32_t tag_check(const std::string tag, uint32_t & tag_length, char type);
+
+// char search_tag_type(const std::string tag);
+// char search_tag_subtype(const std::string tag);
+// uint32_t search_tag_pos(const std::string tag);
+// uint32_t search_tag_length(const std::string tag);
 
 inline void pbam1_t::seq_to_str(uint8_t val, std::string & dest) {
   switch(val) {

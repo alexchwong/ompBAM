@@ -1,3 +1,4 @@
+// [[Rcpp::depends(ompBAM)]]
 #include <ompBAM.hpp>
 
 #include "Rcpp.h"
@@ -14,13 +15,11 @@ unsigned int use_threads(int n_threads = 1) {
 }
 
 // [[Rcpp::export]]
-int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose = true){
-  
+int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1){
+
   // Ensure number of threads requested < number of system threads available
   unsigned int n_threads_to_really_use = use_threads(n_threads_to_use);
-  Rcout << "Using " << n_threads_to_really_use << " threads\n";
 
-  // Open BAM file
   pbam_in inbam;
   inbam.openFile(bam_file, n_threads_to_really_use);
   
@@ -28,31 +27,35 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
   std::vector<uint32_t> u32_chr_lens;
   int chrom_count = inbam.obtainChrs(s_chr_names, u32_chr_lens);
 
-  // obtainChrs and SetInputHandle already returns relevant error msgs
-  if(chrom_count <= 0) return(-1);
+  // If obtainChrs returns zero or negative # chromosomes, BAM reading has failed
+  if(chrom_count <= 0) return(-1); 
   
   // Creates a data structure that stores per-chromosome read counts
   std::vector<uint32_t> total_reads(chrom_count);
 
-  // Loop to read part BAM file, filling the buffers with reads
   while(0 == inbam.fillReads()) {
-    // Internal OpenMP parallel FOR loop, 1 thread runs 1 loop, n threads
+    // OpenMP parallel FOR loop, each thread runs 1 loop simultaneously.
     #ifdef _OPENMP
     #pragma omp parallel for num_threads(n_threads_to_really_use) schedule(static,1)
     #endif
     for(unsigned int i = 0; i < n_threads_to_really_use; i++) {
       std::vector<uint32_t> read_counter(chrom_count);
+      
+      // Gets the first read from the thread read storage buffer
       pbam1_t read(inbam.supplyRead(i));
-      do {
-        if(read.validate()) {
-          if(read.refID() >= 0) {
-            read_counter.at(read.refID())++;     
-          }
+      // Keep looping while reads are valid
+      while(read.validate()) {
+        // Counts the read if it is mapped to a chromosome
+        if(read.refID() >= 0 && read.refID() < chrom_count) {
+          read_counter.at(read.refID())++;
         }
-        read = inbam.supplyRead(i);
-      } while(read.validate());
-    
-      // Add reads tally. pragma omp critical ensures only 1 thread writes at a time
+        
+        // Gets the next read
+        read = inbam.supplyRead(i);     
+      }
+      // Adds the counted reads to the final count
+      // #pragma omp critical ensures only 1 thread at a time runs the following
+      // block of code.
       #ifdef _OPENMP
       #pragma omp critical
       #endif
@@ -60,9 +63,15 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
         total_reads.at(j) += read_counter.at(j);
       }
     }
+    // At this stage, all threads would have read all their thread-specific reads
+    // At the next call to pbam_in::fillReads(), if any reads were not read, it
+    // will throw an error and fillReads() will return -1.
+    // If we have finished reading the BAM file, fillReads() will return 1.
   }
 
-  // Outputs summarised reads
+  inbam.closeFile();
+
+  // Prints out the count summary to console output
   Rcout << bam_file << " summary:\n" << "Name\tLength\tNumber of reads\n";
   for(unsigned int j = 0; j < (unsigned int)chrom_count; j++) {
     Rcout << s_chr_names.at(j) << '\t' << u32_chr_lens.at(j) << '\t'

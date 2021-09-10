@@ -22,7 +22,7 @@
 #include "pbam_in.hpp"
 
 inline void paraBAM_version() {
-  std::string version = "0.1.0";
+  std::string version = "0.98.0";
   Rcpp::Rcout << "Compiled using ompBAM version " << version << "\n";
 }
 

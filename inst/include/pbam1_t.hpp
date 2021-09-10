@@ -35,7 +35,7 @@ class pbam1_t{
     uint32_t block_size_val; uint32_t tag_size_val;
     std::map< std::string, pbam_tag_index > tag_index;
     
-    // Functions
+    // Internal Functions
     void reset();
     
     void seq_to_str(const uint8_t val, std::string & dest);
@@ -155,9 +155,15 @@ class pbam1_t{
        - Copies data contained within given tag to the dest buffer.
        - Returns -1 if the data type is not appropriate for given tag
        - Returns 0 if success
+       
+       NB: Tag types of type 'H' (hexadecimal) are NOT SUPPORTED!
+       In https://samtools.github.io/hts-specs/SAMtags.pdf, there are currently
+       no tags that use this data type
+       If there are any future tags that use this data type, please inform
+       the ompBAM developer
     */
     
-    // Fills a vector with the tags available to each read
+    // Fills a vector with the tags contained in the read
     int AvailTags(std::vector<std::string> & tags);
 
     // Returns a char of the size, type and subtype designates of the tag
@@ -177,7 +183,8 @@ class pbam1_t{
 
     // Returns values of fixed length
     // - For tags of type AcCsSiIf
-    char tagVal_A(const std::string tag);
+    // Returns '\0' or 0 if fail
+    char tagVal_A(const std::string tag);   
     int8_t tagVal_c(const std::string tag);
     uint8_t tagVal_C(const std::string tag);
     int16_t tagVal_s(const std::string tag);
@@ -186,10 +193,11 @@ class pbam1_t{
     uint32_t tagVal_I(const std::string tag);
     float tagVal_f(const std::string tag);
 
-    // Returns a Z-tag by reference to a string
+    // Returns a Z-tag by reference to a string. 
     int tagVal_Z(const std::string tag, std::string & dest);    // 'Z'
 
     // Returns a B-tag by reference to its respective type
+    // Returns tag length of string if success, -1 if fail
     int tagVal_B(const std::string tag, std::vector<int8_t> & dest);   // 'B, c'
     int tagVal_B(const std::string tag, std::vector<uint8_t> & dest);    // 'B, C'
     int tagVal_B(const std::string tag, std::vector<int16_t> & dest);    // 'B, s'
@@ -199,7 +207,7 @@ class pbam1_t{
     int tagVal_B(const std::string tag, std::vector<float> & dest);      // 'B, f'
 };
 
-#include "pbam1_t_initializers.hpp"
+#include "pbam1_t_constructors.hpp"
 #include "pbam1_t_getters.hpp"
 #include "pbam1_t_tag_getters.hpp"
 #include "pbam1_t_internals.hpp"
