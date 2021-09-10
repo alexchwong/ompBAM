@@ -1,5 +1,6 @@
 #' @import zlibbioc
 #' @import Rcpp
+#' @importFrom usethis ui_done
 NULL
 
 #' ompBAM: C++ header library for parallel sequential reading
