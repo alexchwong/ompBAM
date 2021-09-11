@@ -16,7 +16,7 @@ Description: Although various tools for multi-threaded BAM processing (samtools,
 	all the parallel file-access and bgzf decompression, allowing developers to 
 	focus on multi-threaded handling of individual reads.
 License: MIT + file LICENSE
-Imports: Rcpp, zlibbioc, devtools, usethis
+Imports: Rcpp, zlibbioc, devtools, usethis, desc
 Suggests: 
     RcppProgress, knitr, rmarkdown, testthat (>= 3.0.0)
 VignetteBuilder: knitr

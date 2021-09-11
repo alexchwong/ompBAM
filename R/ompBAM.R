@@ -1,6 +1,8 @@
 #' @import zlibbioc
 #' @import Rcpp
-#' @importFrom usethis ui_done
+#' @importFrom usethis ui_done ui_warn use_directory use_git_ignore
+#' @importFrom desc desc_get_deps desc_set_dep desc_del_dep
+#' @importFrom devtools load_all
 NULL
 
 #' ompBAM: C++ header library for parallel sequential reading
@@ -31,13 +33,6 @@ NULL
 #' @md
 NULL
 
-
-# Shortcuts to internal functions from package usethis 
-UT_use_directory <- getFromNamespace("use_directory", "usethis")
-UT_use_git_ignore <- getFromNamespace("use_git_ignore", "usethis")
-UT_use_dependency <- getFromNamespace("use_dependency", "usethis")
-
-
 #' Sets up the package in the given directory to use ompBAM
 #'
 #' This function creates a new package in the given directory (unless one 
@@ -54,7 +49,6 @@ UT_use_dependency <- getFromNamespace("use_dependency", "usethis")
 #'
 #' @export
 use_ompBAM <- function(path = ".") {
-    require("usethis")
     proj_path = .check_ompBAM_path(path)
     proj_name = basename(proj_path)   
     
@@ -65,8 +59,8 @@ use_ompBAM <- function(path = ".") {
     makevars_win = file.path(proj_path, "src", "Makevars.win")
     example_code = file.path(proj_path, "src/ompBAM_example.cpp")
     R_import_file = file.path(proj_path, "R/ompBAM_imports.R")
-    UT_use_directory("src")
-    UT_use_git_ignore(c("*.o", "*.so", "*.dll"), "src")
+    use_directory("src")
+    use_git_ignore(c("*.o", "*.so", "*.dll"), "src")
 
     write(paste0("#' @useDynLib ", proj_name, ", .registration = TRUE"),
         R_import_file, sep="\n")
@@ -89,10 +83,10 @@ use_ompBAM <- function(path = ".") {
         example_code)
     ui_done("Created src/ompBAM_example.cpp with idxstats_pbam() function")
     
-    UT_use_dependency("ompBAM", "Imports")
-    UT_use_dependency("Rcpp", "LinkingTo")
-    UT_use_dependency("zlibbioc", "LinkingTo")
-    UT_use_dependency("ompBAM", "LinkingTo")
+    omp_use_dependency("ompBAM", "Imports", proj_path)
+    omp_use_dependency("Rcpp", "LinkingTo", proj_path)
+    omp_use_dependency("zlibbioc", "LinkingTo", proj_path)
+    omp_use_dependency("ompBAM", "LinkingTo", proj_path)
     
     end_msg = paste(proj_name, "successfully created in", proj_path)
     ui_done(end_msg)
@@ -113,7 +107,6 @@ use_ompBAM <- function(path = ".") {
 #' the 'examples' subfolder of ompBAM. It uses devtools::load_all() to simulate
 #' package creation. After running this function to compile ompBAMExample(), 
 #' users can run the example functions contained therein.
-#' @param pkg The name of the example package (default "ompBAMExample")
 #' @return None.
 #' @examples
 #' # The directory containing the source code is given by the path here
@@ -123,8 +116,6 @@ use_ompBAM <- function(path = ".") {
 #' # Install the ompBAMExample package
 #' 
 #' install_ompBAM_example()
-#'
-#' ompBAMExample::idxstats_pbam(example_BAM())
 #' @export
 install_ompBAM_example <- function() {
     pkg = "ompBAMExample"
@@ -201,3 +192,45 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
     return(proj_path)
 }
 
+# modeled after usethis::use_dependency
+omp_use_dependency <- function(package, type, proj_path) {
+    types <- c("Depends", "Imports", "Suggests", "Enhances", "LinkingTo")
+    names(types) <- tolower(types)
+    type <- types[[match.arg(tolower(type), names(types))]]
+    
+    deps <- desc::desc_get_deps(proj_path)
+    
+    existing_dep <- deps$package == package
+    existing_type <- deps$type[existing_dep]
+    is_linking_to <- (existing_type != "LinkingTo" & type == "LinkingTo") |
+        (existing_type == "LinkingTo" & type != "LinkingTo")
+    
+    if (!any(existing_dep) || any(is_linking_to)) {
+        done_msg = paste("Adding", package, "to", type, "field in DESCRIPTION")
+        ui_done(done_msg)
+        desc::desc_set_dep(package, type, file = proj_path)
+        return(invisible(TRUE))
+    }
+    
+    existing_type <- setdiff(existing_type, "LinkingTo")
+    delta <- sign(match(existing_type, types) - match(type, types))
+    if (delta <= 0) {
+        # don't downgrade
+        warn_msg = paste(
+            "Package", package, "is already listed in",
+            existing_type, "in DESCRIPTION, no change made."
+        )
+        ui_warn(warn_msg)
+        return(invisible(FALSE))
+    } else if (delta > 0) {
+    # upgrade
+        if (existing_type != "LinkingTo") {
+            done_msg = paste("Moving", package, "from", existing_type,
+                "to", type, "field in DESCRIPTION")
+            ui_done(done_msg)
+            desc::desc_del_dep(package, existing_type, file = proj_path)
+            desc::desc_set_dep(package, type, file = proj_path)
+        }
+    }
+    invisible(TRUE)
+}

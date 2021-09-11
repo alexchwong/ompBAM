@@ -6,9 +6,6 @@
 \usage{
 install_ompBAM_example()
 }
-\arguments{
-\item{pkg}{The name of the example package (default "ompBAMExample")}
-}
 \value{
 None.
 }
@@ -29,6 +26,4 @@ print(system.file(file.path('examples', "ompBAMExample"),
 # Install the ompBAMExample package
 
 install_ompBAM_example()
-
-ompBAMExample::idxstats_pbam(example_BAM())
 }
