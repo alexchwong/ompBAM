@@ -19,7 +19,7 @@ focus on multi-threaded handling of individual reads.
 * Development version from Github:
 ```
 library("devtools")
-install_github("alexchwong/ompBAM", dependencies=TRUE)
+install_github("alexchwong/ompBAM", dependencies=TRUE, build_vignettes = TRUE)
 ```
 
 ## Documentation
