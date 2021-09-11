@@ -20,7 +20,7 @@ focus on multi-threaded handling of individual reads.
 \details{
 For a quick start guide and a full list of functionality, refer to
 the vignette
-\code{vignette("ompBAM-API-Docs", package = "ompBAM")}
+\href{../doc/ompBAM-API-Docs.html}{\code{vignette("ompBAM-API-Docs", package = "ompBAM")}}
 }
 \author{
 Alex Chit Hei Wong

@@ -22,7 +22,7 @@ Suggests:
 VignetteBuilder: knitr
 biocViews: Software, Transcriptomics, RNASeq, 
 Encoding: UTF-8
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 URL: https://github.com/alexchwong/ompBAM
 BugReports: https://support.bioconductor.org/
 Config/testthat/edition: 3
