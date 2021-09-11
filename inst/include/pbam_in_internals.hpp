@@ -21,6 +21,7 @@ inline void pbam_in::initialize_buffers() {
 
   // Clears handle to ifstream
   IN = NULL;
+  error_state = 0;
 }
 
 inline void pbam_in::clear_buffers() {

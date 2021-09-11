@@ -5,10 +5,12 @@
 inline int pbam_in::fillReads() {
   if(!magic_header) {
     Rcpp::Rcout << "Header is not yet read\n";
+    error_state = -1;
     return(-1);
   }
   if(n_ref == 0) {
     Rcpp::Rcout << "No chromosome names stored. Is pbam_in::readHeader() been run yet?\n";
+    error_state = -1;
     return(-1);
   }
   
@@ -18,6 +20,7 @@ inline int pbam_in::fillReads() {
       if(read_cursors.at(i) < read_ptr_ends.at(i)) {
         Rcpp::Rcout << "Thread " << i << " has reads remaining. Please debug your code "
           << "and make sure all threads clear their reads before filling any more reads\n";
+        error_state = -1;
         return(-1);
       }
     }
@@ -28,7 +31,15 @@ inline int pbam_in::fillReads() {
   read_ptr_ends.resize(0);
   
   // Call decompress
-  decompress(DATA_BUFFER_CAP);
+  size_t bytes_decompressed = decompress(DATA_BUFFER_CAP);
+  if(bytes_decompressed == 0) {
+    if(GetProgress() != GetFileSize()) {
+      Rcpp::Rcout << "Error occurred during decompression\n";
+      error_state = -1;
+      return(-1);
+    }
+    return(1);
+  }
   
   // Check decompressed data contains at least 1 full read  
   if(data_buf_cap - data_buf_cursor < 4) return(1);

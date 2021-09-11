@@ -264,8 +264,10 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
     
   }
   
-  if(error_occurred) return(0);
-  
+  if(error_occurred) {
+    Rcpp::Rcout << "Decompression failed at " << GetProgress() << " bytes\n";
+    return(0);
+  }
   file_buf_cursor = src_bgzf_cap.at(src_bgzf_cap.size() - 1);
   data_buf_cap = dest_bgzf_cap.at(dest_bgzf_cap.size() - 1);
 

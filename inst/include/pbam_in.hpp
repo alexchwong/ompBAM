@@ -95,6 +95,7 @@ class pbam_in {
     // Returns the number of bytes decompressed
     size_t GetProgress() {return(prog_tellg());};
     
+    int GetErrorState() {return(error_state);};
     /* 
       Returns the incremental number of bytes decompressed since the last call 
       to IncProgress(). A useful function for RcppProgress progress bars.
@@ -139,13 +140,16 @@ class pbam_in {
     char *          data_buf; 
     size_t          data_buf_cap; 
     size_t          data_buf_cursor;
-    
 /* 
   Thread-specific read cursor positions and boundaries
   Thread returns a null read if cursor read_cursors >= read_ptr_ends
 */
     std::vector<size_t>         read_cursors;     // Cursor(s) of start of next read in each thread
     std::vector<size_t>         read_ptr_ends;    // Boundaries of read positions in each thread
+
+// Error state of decompression
+    int error_state = 0;
+
 
 // Internal functions
 

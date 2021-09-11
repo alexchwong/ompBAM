@@ -77,6 +77,7 @@ int idxstats_pbam(std::string bam_file, int n_threads_to_use = 1, bool verbose =
     // will throw an error and fillReads() will return -1.
     // If we have finished reading the BAM file, fillReads() will return 1.
   }
+  if(inbam.GetErrorState() == -1) return(-1);
   // Final increment to RcppProgress bar to fill it to 100%
   p.increment(inbam.IncProgress());
   
