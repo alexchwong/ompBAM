@@ -192,6 +192,8 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
   // Now comes the multi-threaded decompression:
   bool error_occurred = false;
   
+  std::vector<z_stream> thread_streams(decomp_threads);
+  
   #ifdef _OPENMP
   #pragma omp parallel for num_threads(threads_to_use) schedule(static,1)
   #endif
@@ -210,14 +212,14 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
       uint16_t * src_size;
       uint32_t * dest_size;
 
-      z_stream * zs;
+      z_stream * zs = &(thread_streams.at(k));
       while(thread_src_cursor < src_bgzf_cap.at(k) && !error_occurred) {
         src_size = (uint16_t *)(file_buf + thread_src_cursor + 16);
         crc_check = (uint32_t *)(file_buf + thread_src_cursor + *src_size+1 - 8);
         dest_size = (uint32_t *)(file_buf + thread_src_cursor + *src_size+1 - 4);
 
         if(*dest_size > 0) {
-          zs = new z_stream;
+          // zs = new z_stream;
           zs->zalloc = NULL; zs->zfree = NULL; zs->msg = NULL;
           zs->next_in = (Bytef*)(file_buf + thread_src_cursor + 18);
           zs->avail_in = *src_size + 1 - 18;
@@ -253,7 +255,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
               error_occurred = true;
             }
           }
-          delete zs;
+          // delete zs;
         }
         thread_src_cursor += *src_size + 1;
         thread_dest_cursor += *dest_size;
