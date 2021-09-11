@@ -30,5 +30,5 @@ Access the ompBAM-API-Docs via its included vignette. This includes:
 * Detailed documentation of the `pbam_in` and `pbam1_t` objects that comprise ompBAM.
 
 ```
-browseVignettes("NxtIRF")
+browseVignettes("ompBAM")
 ```
