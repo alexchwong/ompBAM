@@ -50,9 +50,17 @@ inline int pbam1_t::realize() {
   if(realized) return(0);
   if(validate()) {
     char *tmp = read_buffer;
-    read_buffer = (char*)malloc(block_size_val + 1);
-    memcpy(read_buffer, tmp, block_size_val);
+    read_buffer = (char*)malloc(block_size_val + 5);
+    memcpy(read_buffer, tmp, block_size_val + 4);
     core = (pbam_core_32 *)(read_buffer + 4);
+    
+    uint32_t *temp_block_size = (uint32_t *)(read_buffer);
+    block_size_val = *temp_block_size;
+    // re-derive block_size_val and tag_size_val:
+    tag_size_val = block_size_val - (32 + 
+        core->l_read_name + core->n_cigar_op * 4 + 
+        core->l_seq + ((core->l_seq + 1) / 2));
+    
     realized = true;
   }
   if(!validate()) return(-1);
