@@ -340,7 +340,28 @@ inline void pbam_in::move_residual_data(
 }
 
 inline int pbam_in::clean_data_buffer(const size_t n_bytes_to_decompress) {
-  move_residual_data(&data_buf, data_buf_cursor, data_buf_cap, n_bytes_to_decompress);
+  // Remove residual bytes to beginning of buffer:
+  // Rcpp::Rcout << "clean_data_buffer\n";
+  char * data_tmp;
+  char * temp_buffer;
+  size_t residual = data_buf_cap-data_buf_cursor;
+  
+  if(residual > 0) {
+    // have to move bytes around
+    temp_buffer = (char*)malloc(residual + 1);
+    memcpy(temp_buffer, data_buf + data_buf_cursor, residual);
+  
+    data_buf = (char*)realloc(data_tmp = data_buf, std::max(n_bytes_to_decompress + 1, residual + 1));
+    memcpy(data_buf, temp_buffer, residual);
+    free(temp_buffer);
+    
+    data_buf_cap = residual;
+  } else {
+    data_buf = (char*)realloc(data_tmp = data_buf, n_bytes_to_decompress + 1);
+    data_buf_cap = 0;
+  }
+  data_buf_cursor = 0;
+
   return(0);
 }
 
@@ -355,9 +376,25 @@ inline int pbam_in::swap_file_buffer_if_needed() {
   size_t chunk_size = (size_t)(FILE_BUFFER_CAP / chunks_per_file_buf);
   if(file_buf_cap  - file_buf_cursor > chunk_size) return(1);
   
+  char * file_tmp;
+  char * residual_data_buffer;
+  size_t residual = file_buf_cap-file_buf_cursor;
   // Remove residual bytes to beginning of buffer:
-  move_residual_data(&file_buf, file_buf_cursor, file_buf_cap, FILE_BUFFER_CAP);
-  size_t residual = file_buf_cap;
+  if(residual > 0) {
+    // have to move bytes around
+    residual_data_buffer = (char*)malloc(residual + 1);
+    memcpy(residual_data_buffer, file_buf + file_buf_cursor, residual);
+  
+    file_buf = (char*)realloc(file_tmp = file_buf, FILE_BUFFER_CAP + 1);
+    memcpy(file_buf, residual_data_buffer, residual);
+    free(residual_data_buffer);
+  } else {
+    // residual == 0
+    file_buf = (char*)realloc(file_tmp = file_buf, FILE_BUFFER_CAP + 1);
+  }
+  
+  file_buf_cap = residual;
+  file_buf_cursor = 0;
   
   if(next_file_buf_cap <= FILE_BUFFER_CAP - file_buf_cap) {
     // If next_file_buf fits inside cap:
@@ -370,17 +407,20 @@ inline int pbam_in::swap_file_buffer_if_needed() {
     free(next_file_buf); next_file_buf = NULL;
     next_file_buf_cap = 0;
   } else {
-    // Transfers some data from next_file_buf to fill up file_buf
-    // Then move the residual in next_file_buf to beginning of buffer 
-  
   // copies some data to fill file_buf to the brim
     memcpy(file_buf + file_buf_cap, next_file_buf, FILE_BUFFER_CAP - file_buf_cap);
     file_buf_cap = FILE_BUFFER_CAP;
+
+    // Move data around in secondary buffer so that it starts at zero:
+    size_t residual2 = next_file_buf_cap - (FILE_BUFFER_CAP - residual);
     
-    next_file_buf_cursor = FILE_BUFFER_CAP - residual;
-    
-    move_residual_data(&next_file_buf, next_file_buf_cursor, next_file_buf_cap, 
-      FILE_BUFFER_CAP);
+    residual_data_buffer = (char*)malloc(residual2 + 1);
+    memcpy(residual_data_buffer, next_file_buf + FILE_BUFFER_CAP - residual, residual2);
+  
+    next_file_buf = (char*)realloc(file_tmp = next_file_buf, FILE_BUFFER_CAP + 1);
+    memcpy(next_file_buf, residual_data_buffer, residual2);
+    free(residual_data_buffer);  
+    next_file_buf_cap = residual2;
   }
   return(0);
 }
@@ -391,16 +431,31 @@ inline int pbam_in::swap_file_buffer_if_needed() {
   Then fills buffer to n_bytes
 */
 inline size_t pbam_in::load_from_file(const size_t n_bytes) {
-  move_residual_data(&file_buf, file_buf_cursor, file_buf_cap, FILE_BUFFER_CAP);
-  size_t residual = file_buf_cap;
-  
-  if(n_bytes <= residual) return(0);
-  if(FILE_BUFFER_CAP <= file_buf_cap) return(0);
+  char * file_tmp;
+  char * residual_data_buffer;
+  size_t residual = file_buf_cap-file_buf_cursor;
 
   size_t n_bytes_to_load =  std::min( std::max(n_bytes, residual) , FILE_BUFFER_CAP);  // Cap at file buffer
   size_t n_bytes_to_read = std::min(n_bytes_to_load - residual, IS_LENGTH - tellg());
   if(n_bytes_to_read == 0) return(0);
+  // Rcpp::Rcout << "\nload_from file: n_bytes_to_read = " << n_bytes_to_read << '\n';
+  // Remove residual bytes to beginning of buffer:
+  if(residual > 0) {
+    // have to move bytes around
+    residual_data_buffer = (char*)malloc(residual + 1);
+    memcpy(residual_data_buffer, file_buf + file_buf_cursor, residual);
   
+    file_buf = (char*)realloc(file_tmp = file_buf, n_bytes_to_read + residual + 1);
+    memcpy(file_buf, residual_data_buffer, residual);
+    free(residual_data_buffer);
+  } else {
+    // residual == 0
+    file_buf = (char*)realloc(file_tmp = file_buf, n_bytes_to_read + 1);
+  }
+  file_buf_cursor = 0;
+  file_buf_cap = residual;
+  
+  // IN->read(file_buf + file_buf_cap, n_bytes_to_read);
   read_file_to_buffer(file_buf + file_buf_cap, n_bytes_to_read);
 
   file_buf_cap += n_bytes_to_read;
