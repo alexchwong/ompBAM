@@ -1,6 +1,7 @@
 #' @import zlibbioc
 #' @import Rcpp
 #' @importFrom usethis ui_done ui_warn use_directory use_git_ignore
+#' @importFrom usethis create_package proj_set
 #' @importFrom desc desc_get_deps desc_set_dep desc_del_dep
 #' @importFrom devtools load_all
 NULL
@@ -64,7 +65,8 @@ use_ompBAM <- function(path = ".") {
 
     write(paste0("#' @useDynLib ", proj_name, ", .registration = TRUE"),
         R_import_file, sep="\n")
-    write("#' @import ompBAM", R_import_file, append = TRUE, sep="\n")
+    write("#' @import Rcpp", R_import_file, append = TRUE, sep="\n")
+    write("#' @import zlibbioc", R_import_file, append = TRUE, sep="\n")
     write("NULL", R_import_file, append = TRUE, sep="\n")
     ui_done(paste("Created", R_import_file, "with roxygen tags"))
 
@@ -83,10 +85,11 @@ use_ompBAM <- function(path = ".") {
         example_code)
     ui_done("Created src/ompBAM_example.cpp with idxstats_pbam() function")
     
-    omp_use_dependency("ompBAM", "Imports", proj_path)
+    omp_use_dependency("Rcpp", "Imports", proj_path)
+    omp_use_dependency("zlibbioc", "Imports", proj_path)
+    omp_use_dependency("ompBAM", "LinkingTo", proj_path)
     omp_use_dependency("Rcpp", "LinkingTo", proj_path)
     omp_use_dependency("zlibbioc", "LinkingTo", proj_path)
-    omp_use_dependency("ompBAM", "LinkingTo", proj_path)
     
     end_msg = paste(proj_name, "successfully created in", proj_path)
     ui_done(end_msg)
@@ -94,8 +97,6 @@ use_ompBAM <- function(path = ".") {
     end_msg2 = paste("Please run roxygen2 using devtools::document() before",
         "building the package.")
     message(end_msg2)
-    
-    
 }
 
 #' ompBAM Example
