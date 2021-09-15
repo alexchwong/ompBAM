@@ -22,8 +22,17 @@
 #include "pbam_in.hpp"
 
 inline void paraBAM_version() {
-  std::string version = "0.98.0";
+  std::string version = "0.99.0";
   Rcpp::Rcout << "Compiled using ompBAM version " << version << "\n";
+}
+
+inline void is_compiled_with_OpenMP() {
+  #ifdef _OPENMP
+    Rcpp::Rcout << "Compiled with OpenMP; " << omp_get_max_threads()
+      << " threads available\n";
+  #else
+    Rcpp::Rcout << "Compiled without OpenMP support\n";
+  #endif
 }
 
 #endif
