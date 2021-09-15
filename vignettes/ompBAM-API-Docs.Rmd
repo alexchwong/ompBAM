@@ -3,32 +3,32 @@ title: "ompBAM API Documentation"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 author: "Alex C H Wong"
 output:
-  rmarkdown::html_document:
-    highlight: pygments
-    toc: true
-    toc_float: true
+    rmarkdown::html_document:
+        highlight: pygments
+        toc: true
+        toc_float: true
 abstract:
-  Although various tools for multi-threaded BAM processing (samtools,
-  sambamba) are available, currently there are none available to the 
-  R/Bioconductor environment. Parallelism in R is achieved using BiocParallel 
-  or related packages. Typical alternatives include processing multiple BAM 
-  files, each using a single core. Although easy to set up, memory-intensive
-  applications limit such approaches. *ompBAM* is a header-only C++ library 
-  based on OpenMP, allowing developers to implement OpenMP-based parallelism 
-  for the sequential reading of BAM files. *ompBAM* makes it easy by handling 
-  all the parallel file-access and bgzf decompression, allowing developers to 
-  focus on multi-threaded handling of individual reads.
-  *ompBAM* package version `r packageVersion("ompBAM")`
+    Although various tools for multi-threaded BAM processing (samtools,
+    sambamba) are available, currently there are none available to the 
+    R/Bioconductor environment. Parallelism in R is achieved using BiocParallel
+    or related packages. Typical alternatives include processing multiple BAM 
+    files, each using a single core. Although easy to set up, memory-intensive
+    applications limit such approaches. *ompBAM* is a header-only C++ library 
+    based on OpenMP, allowing developers to implement OpenMP-based parallelism 
+    for the sequential reading of BAM files. *ompBAM* makes it easy by handling 
+    all the parallel file-access and bgzf decompression, allowing developers to 
+    focus on multi-threaded handling of individual reads.
+    *ompBAM* package version `r packageVersion("ompBAM")`
 vignette: >
-  %\VignetteIndexEntry{ompBAM API Documentation}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+    %\VignetteIndexEntry{ompBAM API Documentation}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
+    collapse = TRUE,
+    comment = "#>"
 )
 ```
 
@@ -194,7 +194,7 @@ example RNA-seq BAM file of unsorted reads.
 
 Note that we use `:::` to call functions exported from the C++ source code by
 Rcpp. This is because, although Rcpp has exported the `idxstats_pbam` function,
-this is currently only accessible to the R source code in your package. You will 
+this is currently only accessible to the R source code in your package. You will
 still need to create wrapper functions from within R, as covered later in 
 section (2c).
 
@@ -226,7 +226,9 @@ which takes an `int` parameter and returns an `unsigned int` parameter:
 unsigned int use_threads(int n_threads = 1) {
   #ifdef _OPENMP
   if(n_threads <= 1) return(1);
-  if(n_threads > omp_get_max_threads()) return((unsigned int)omp_get_max_threads());
+  if(n_threads > omp_get_max_threads()) {
+    return((unsigned int)omp_get_max_threads());
+  }
   return((unsigned int)n_threads);
   #else
   return(1);
@@ -320,7 +322,7 @@ number if the BAM header read fails, and will return the number of chromosomes
 if the function is run successfully. We can check for this with the following:
 
 ```{Rcpp eval=FALSE}
-  if(chrom_count <= 0) return(-1); 	// tells idxstats_pbam to return an error
+  if(chrom_count <= 0) return(-1); // tells idxstats_pbam to return an error
 ```
 
 ## (2e) Constructing a loop to read the BAM file using ompBAM
@@ -609,8 +611,8 @@ idxstats function:
 
 ## (2k) Adding a progress bar
 
-BAM files are very large files (or we wouldn't use multi-threading to read them).
-Sometimes a progress bar is very useful in this regard.
+BAM files are very large files (or we wouldn't use multi-threading to read 
+them). Sometimes a progress bar is very useful in this regard.
 
 pbam_in has two functions that provide useful data that can be parsed to the 
 RcppProgress progress bar.
@@ -628,7 +630,8 @@ contains the `idxstats_pbam` function with the addition of a RcppProgress bar.
 The path to the source code can be returned using the following in R:
 
 ```{r eval=FALSE}
-source_path = system.file("examples", "ompBAMExample", "src", package = "ompBAM")
+source_path = system.file("examples", "ompBAMExample", "src", 
+    package = "ompBAM")
 ```
 
 # (3) pbam_in function documentation
@@ -889,8 +892,8 @@ std::string bam_file = "example.bam";
 pbam_in inbam;
 inbam.openFile(bam_file, 4);
 
-std::vector<std::string> s_chr_names;   // A vector to contain chromosome names
-std::vector<uint32_t> u32_chr_lens;     // A vector to contain chromosome lengths
+std::vector<std::string> s_chr_names; // A vector to contain chromosome names
+std::vector<uint32_t> u32_chr_lens;   // A vector to contain chromosome lengths
 int chrom_count = inbam.obtainChrs(s_chr_names, u32_chr_lens);
 ```
 
@@ -963,7 +966,7 @@ from which to retrieve the read.
 
 #### Details
 
-After `fillReads()` is called and the data buffer is filled, the reads are split 
+After `fillReads()` is called and the data buffer is filled, the reads are split
 into equal portions of decompressed data. Each chunk of data is processed by a 
 single thread. This allows developers to set up an OpenMP for-loop such that 
 reads from each chunk are processed exclusively by each thread.
@@ -1057,7 +1060,8 @@ size_t IncProgress();
 #### Return value
 
 `GetFileSize()` Returns the file size of the BAM file
-`GetProgress()` Returns the total number of bytes processed (read and decompressed)
+`GetProgress()` Returns the total number of bytes processed (read and 
+decompressed)
 `IncProgress()` Returns the number of bytes processed since the last call to 
 `IncProgress()`
 
@@ -1142,7 +1146,8 @@ NB: Generally speaking, users are not expected to use the constructor to create
 // Creates a pbam1_t object
 pbam1_t read;
 
-// Construct and "realize" read based on a known location in a buffer given by pointer (char* dest)
+// Construct and "realize" read based on a known location 
+// in a buffer given by pointer (char* dest)
 pbam1_t read(dest, true)
 
 // Use copy constructor to get a read from the pbam_in object `inbam`
@@ -1198,7 +1203,8 @@ Internally, `validate()` is called prior to returning any values from the
 ```{Rcpp eval=FALSE}
 pbam1_t read = inbam.supplyRead(i);
 while(read.validate()){
-  // keep getting reads from pbam_in::supplyRead() until it returns an empty, invalid read
+  // keep getting reads from pbam_in::supplyRead() 
+  // until it returns an empty, invalid read
   read = inbam.supplyRead(i);
 }
 ```
@@ -1244,11 +1250,12 @@ while(read.validate()){
   read.realize();
   read_container.push_back(read);
   
-  // keep getting reads from pbam_in::supplyRead() until it returns an empty, invalid read
+  // keep getting reads from pbam_in::supplyRead() 
+  // until it returns an empty, invalid read
   read = inbam.supplyRead(i);
 }
-// reads stored inside read_container should now persist beyond the next call to 
-// pbam_in::fillReads()
+// reads stored inside read_container should now persist beyond the next call
+// to pbam_in::fillReads()
 
 ```
 
@@ -1328,7 +1335,7 @@ pbam1_t read = inbam.supplyRead(i);
 read.block_size();      // Size of the data
 read.refID();           // refID of chromosome of this alignment
 int32_t pos();          // leftmost 0-based genome coordinate of this alignment
-uint8_t l_read_name();  // length of read name, including terminating '\0' null char
+uint8_t l_read_name();  // length of read name, including terminating '\0' null
 uint8_t mapq();         // mapping quality
 uint16_t bin();         // BAI index bin
 uint16_t n_cigar_op();  // number of cigar operations
@@ -1369,8 +1376,10 @@ int cigar_ops_and_vals(std::vector<char> & ops, std::vector<uint32_t> & vals);
 #### Parameters
 
 * `std::string & dest` The reference to a string to contain the cigar string
-* `const uint16_t pos` The index of the cigar operation (`0 <= pos < cigar_size()`)
-* `std::vector<char> & ops` The reference to a `char` vector to contain the cigar operation
+* `const uint16_t pos` The index of the cigar operation 
+(`0 <= pos < cigar_size()`)
+* `std::vector<char> & ops` The reference to a `char` vector to contain the 
+cigar operation
 * `std::vector<uint32_t> & vals` The reference to a `uint32_t` vector to contain
 the number of nucleotides to apply the cigar operation
 
@@ -1416,15 +1425,19 @@ std::string cigar_string;
 read.cigar(cigar_string);
 Rcpp::Rcout << "The cigar string is " << cigar_string << '\n';
 
-Rcpp::Rcout << "The cigar operation at index 0 is " << string(read.cigar_op(0)) 
-            << " and the length to apply this is " << std::to_string(read.cigar_val(0)) << '\n';
+Rcpp::Rcout << "The cigar operation at index 0 is " 
+    << string(read.cigar_op(0)) 
+    << " and the length to apply this is " 
+    << std::to_string(read.cigar_val(0)) << '\n';
 
 std::vector<char> ops;
 std::vector<uint32_t> vals;
 read.cigar_ops_and_vals(ops, vals);
 
-Rcpp::Rcout << "The cigar operation at index 0 is " << string(ops.at(0)) 
-            << " and the length to apply this is " << std::to_string(vals.at(0)) << '\n';
+Rcpp::Rcout << "The cigar operation at index 0 is " 
+    << string(ops.at(0)) 
+    << " and the length to apply this is " 
+    << std::to_string(vals.at(0)) << '\n';
 ```
 
 ## (4g) Getters of Alignment Sequence and Quality score
@@ -1459,9 +1472,9 @@ SAM documentation: [SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf).
 
 It is more convenient to use the latter functions. `int seq(std::string & dest)`
 takes a string reference as parameter and fills this reference with the sequence
-of the read. It returns the length of the read. `qual(std::vector<uint8_t> & dest)`
-takes a `uint8_t` vector by reference and returns with a vector filled with
-quality scores for the sequence.
+of the read. It returns the length of the read. 
+`qual(std::vector<uint8_t> & dest)` takes a `uint8_t` vector by reference 
+and returns with a vector filled with quality scores for the sequence.
 
 #### Details
 
@@ -1484,8 +1497,9 @@ pbam1_t read = inbam.supplyRead(i);
 read.seq(sequence);
 read.qual(qual_scores);
 
-Rcpp::Rcout << "The sequence is " << sequence << " and the quality score of the"
-            << " first nucleotide is " << std::to_string(qual_scores.at(0)) << '\n';
+Rcpp::Rcout << "The sequence is " << sequence 
+    << " and the quality score of the first nucleotide is " 
+    << std::to_string(qual_scores.at(0)) << '\n';
 ```
 
 ## (4h) Tag Getters
@@ -1553,7 +1567,8 @@ in SAM format. See details for further information
 * `p_tagVal()` returns the raw pointer to the beginning of the data contained
 within the given tag. That is, the pointer is 3 bytes downstream to the start
 of the tag label in all tags except tags of type 'B', where it is 8 bytes
-downstream of the tag label. See [SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf)
+downstream of the tag label. See
+[SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf)
 for more details.
 
 * `tagVal_{A/c/C/s/S/i/I/f}()` returns the 1-length value of the given tag type
@@ -1583,7 +1598,8 @@ SAM format as type 'i'. Other types remain as they are.
 
 Note that tags of type 'H' are not supported in ompBAM.
 
-For more details, refer to [SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf),
+For more details, refer to 
+[SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf),
 section 4.2.4 for more information about how tags are stored in BAM format.
 
 Also, refer to [SAMtags.pdf](https://samtools.github.io/hts-specs/SAMtags.pdf)
@@ -1629,4 +1645,10 @@ for(unsigned int j = 0; j < tags.size(); j++) {
       break;
   }
 }
+```
+
+# SessionInfo
+
+```{r}
+sessionInfo()
 ```

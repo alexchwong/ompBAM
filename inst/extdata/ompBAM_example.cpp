@@ -7,7 +7,9 @@ using namespace Rcpp;
 unsigned int use_threads(int n_threads = 1) {
   #ifdef _OPENMP
   if(n_threads <= 1) return(1);
-  if(n_threads > omp_get_max_threads()) return((unsigned int)omp_get_max_threads());
+  if(n_threads > omp_get_max_threads()) {
+    return((unsigned int)omp_get_max_threads());
+  }
   return((unsigned int)n_threads);
   #else
   return(1);
