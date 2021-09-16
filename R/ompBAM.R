@@ -251,7 +251,7 @@ CheckPackageInstalled <- function(
         returntype = c("error", "warning", "silent")
 ) {
     res = tryCatch(
-        ifelse(packageVersion(package)>=version, TRUE, FALSE),
+        ifelse(utils::packageVersion(package)>=version, TRUE, FALSE),
         error = function(e) FALSE)
     if(!res) {
         returntype = match.arg(returntype)
