@@ -1,9 +1,5 @@
 #' @import zlibbioc
 #' @import Rcpp
-#' @importFrom usethis ui_done ui_warn use_directory use_git_ignore
-#' @importFrom usethis create_package proj_set
-#' @importFrom desc desc_get_deps desc_set_dep desc_del_dep
-#' @importFrom devtools load_all
 NULL
 
 #' ompBAM: C++ header library for parallel sequential reading
@@ -51,6 +47,8 @@ NULL
 #'
 #' @export
 use_ompBAM <- function(path = ".") {
+    
+    
     proj_path = .check_ompBAM_path(path)
     proj_name = basename(proj_path)   
     
@@ -61,8 +59,8 @@ use_ompBAM <- function(path = ".") {
     makevars_win = file.path(proj_path, "src", "Makevars.win")
     example_code = file.path(proj_path, "src/ompBAM_example.cpp")
     R_import_file = file.path(proj_path, "R/ompBAM_imports.R")
-    use_directory("src")
-    use_git_ignore(c("*.o", "*.so", "*.dll"), "src")
+    usethis::use_directory("src")
+    usethis::use_git_ignore(c("*.o", "*.so", "*.dll"), "src")
 
     write(paste0("#' @useDynLib ", proj_name, ", .registration = TRUE"),
         R_import_file, sep="\n")
@@ -120,6 +118,8 @@ use_ompBAM <- function(path = ".") {
 #' install_ompBAM_example()
 #' @export
 install_ompBAM_example <- function() {
+    CheckPackageInstalled("devtools")
+    
     pkg = "ompBAMExample"
     from <- system.file(file.path('examples', pkg), package = 'ompBAM')
     if(!dir.exists(from)) {
@@ -157,6 +157,9 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
 
 # Sanity checks on provided path for smooth package creation.
 .check_ompBAM_path = function(path) {
+    CheckPackageInstalled("usethis")
+    CheckPackageInstalled("desc")
+    
     if(!dir.exists(dirname(path))) {
         errormsg = paste(dirname(path), "needs to exist")
         stop(errormsg, call. = FALSE)
@@ -209,7 +212,7 @@ omp_use_dependency <- function(package, type, proj_path) {
     
     if (!any(existing_dep) || any(is_linking_to)) {
         done_msg = paste("Adding", package, "to", type, "field in DESCRIPTION")
-        ui_done(done_msg)
+        usethis::ui_done(done_msg)
         desc::desc_set_dep(package, type, file = proj_path)
         return(invisible(TRUE))
     }
@@ -222,17 +225,39 @@ omp_use_dependency <- function(package, type, proj_path) {
             "Package", package, "is already listed in",
             existing_type, "in DESCRIPTION, no change made."
         )
-        ui_warn(warn_msg)
+        usethis::ui_warn(warn_msg)
         return(invisible(FALSE))
     } else if (delta > 0) {
     # upgrade
         if (existing_type != "LinkingTo") {
             done_msg = paste("Moving", package, "from", existing_type,
                 "to", type, "field in DESCRIPTION")
-            ui_done(done_msg)
+            usethis::ui_done(done_msg)
             desc::desc_del_dep(package, existing_type, file = proj_path)
             desc::desc_set_dep(package, type, file = proj_path)
         }
     }
     invisible(TRUE)
+}
+
+CheckPackageInstalled <- function(
+        package = "DESeq2", version = "1.0.0", 
+        returntype = c("error", "warning", "silent")
+) {
+    res = tryCatch(
+        ifelse(packageVersion(package)>=version, TRUE, FALSE),
+        error = function(e) FALSE)
+    if(!res) {
+        returntype = match.arg(returntype)
+        stopmsg = paste(package, "version", version, "is not installed;",
+            "and is required for this function")
+        if(returntype == "error") {
+            stop(stopmsg, call. = FALSE)
+        } else if(returntype == "warning") {
+            warning(stopmsg, call. = FALSE)
+        } else {
+            message(stopmsg)
+        }
+    }
+    return(res)
 }
