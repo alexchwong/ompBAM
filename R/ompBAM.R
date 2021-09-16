@@ -55,8 +55,9 @@ use_ompBAM <- function(path = ".") {
     usethis::create_package(proj_path, open = FALSE)
     usethis::proj_set(proj_path, force = TRUE)
     
-    makevars = file.path(proj_path, "src", "Makevars")
+    makevars = file.path(proj_path, "src", "Makevars.in")
     makevars_win = file.path(proj_path, "src", "Makevars.win")
+    configure = file.path(proj_path, "configure")
     example_code = file.path(proj_path, "src/ompBAM_example.cpp")
     R_import_file = file.path(proj_path, "R/ompBAM_imports.R")
     usethis::use_directory("src")
@@ -70,14 +71,19 @@ use_ompBAM <- function(path = ".") {
     usethis::ui_done(paste("Created", R_import_file, "with roxygen tags"))
 
     file.copy(system.file(
-        file.path('examples', 'ompBAMExample', "src", "Makevars"), 
+        file.path('examples', 'ompBAMExample', "src", "Makevars.in"), 
             package = 'ompBAM'),
         makevars)
     file.copy(system.file(
         file.path('examples', 'ompBAMExample', "src", "Makevars.win"), 
             package = 'ompBAM'),
         makevars_win)
-    usethis::ui_done("Created src/Makevars and src/Makevars.win")
+    usethis::ui_done("Created src/Makevars.in and src/Makevars.win")
+    file.copy(system.file(
+        file.path('examples', 'ompBAMExample',"configure"), 
+            package = 'ompBAM'),
+        configure)
+    usethis::ui_done("Created configure script")
 
     file.copy(system.file(
         file.path('extdata', 'ompBAM_example.cpp'), package = 'ompBAM'),

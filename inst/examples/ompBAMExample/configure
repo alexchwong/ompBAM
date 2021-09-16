@@ -1,0 +1,60 @@
+#!/usr/bin/env sh
+
+#make the Makevars temp file
+if [ ! -e "./src/Makevars.tmp" ]; then
+	#make the Makevars file
+	touch ./src/Makevars.tmp
+fi
+
+# Only test OpenMP for Macs:
+if [ "$(uname)" = "Darwin" ] ; then
+	#if mac
+	
+	# Find R compilers
+	CC=`${R_HOME}/bin/R CMD config CC`
+	CFLAGS=`${R_HOME}/bin/R CMD config CFLAGS`
+
+# Test source code to see if OpenMP compiles this:
+cat <<EOF > test-omp.c
+#include <omp.h>
+int main() {
+  return omp_get_num_threads();
+}
+EOF
+	
+	# First, try R CMD SHLIB to see if R can already compile
+	# things using OpenMP without any extra help from data.table
+	R_OPENMP="work"
+	"${R_HOME}/bin/R" CMD SHLIB test-omp.c >/dev/null 2>&1 || R_OPENMP="fail"
+
+	if [ "$R_OPENMP" = "fail" ]; then
+	  # Compilation failed -- try forcing -fopenmp instead.
+	  R_OPENMP="work"
+	  "${CC}" "${CFLAGS}" -Xclang -fopenmp test-omp.c || R_OPENMP="fail"
+
+	  if [ "$R_OPENMP" = "work" ]; then
+		echo "${CC} compiles OpenMP with -Xclang -fopenmp"
+	  fi
+	else
+	  echo "R CMD SHLIB supports OpenMP without any extra hint"
+	fi
+
+	# Clean up.
+	rm -f test-omp.* a.out
+	
+	if [ "$R_OPENMP" = "work" ]; then
+		echo "OMPBAM_PKG_CXXFLAGS = -Xclang -fopenmp" > ./src/Makevars.tmp
+		echo "OMPBAM_PKG_LIBS = -lomp" >> ./src/Makevars.tmp
+		echo "" >> ./src/Makevars.tmp
+	fi
+
+elif [ "$(expr substr $(uname -s) 1 5)" = "Linux" ] ;then
+	#if linux
+
+	echo "OMPBAM_PKG_CXXFLAGS = \$(SHLIB_OPENMP_CXXFLAGS)" > ./src/Makevars.tmp
+	echo "OMPBAM_PKG_LIBS = \$(SHLIB_OPENMP_CXXFLAGS)" >> ./src/Makevars.tmp
+	echo "" >> ./src/Makevars.tmp
+fi
+
+cat ./src/Makevars.tmp ./src/Makevars.in > ./src/Makevars
+rm ./src/Makevars.tmp
