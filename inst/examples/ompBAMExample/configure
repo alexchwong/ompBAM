@@ -1,11 +1,5 @@
 #!/usr/bin/env sh
 
-#make the Makevars temp file
-if [ ! -e "./src/Makevars.tmp" ]; then
-	#make the Makevars file
-	touch ./src/Makevars.tmp
-fi
-
 # Only test OpenMP for Macs:
 if [ "$(uname)" = "Darwin" ] ; then
 	#if mac
@@ -23,7 +17,6 @@ int main() {
 EOF
 	
 	# First, try R CMD SHLIB to see if R can already compile
-	# things using OpenMP without any extra help from data.table
 	R_OPENMP="work"
 	"${R_HOME}/bin/R" CMD SHLIB test-omp.c >/dev/null 2>&1 || R_OPENMP="fail"
 
@@ -31,30 +24,38 @@ EOF
 	  # Compilation failed -- try forcing -fopenmp instead.
 	  R_OPENMP="work"
 	  "${CC}" "${CFLAGS}" -Xclang -fopenmp test-omp.c || R_OPENMP="fail"
-
-	  if [ "$R_OPENMP" = "work" ]; then
-		echo "${CC} compiles OpenMP with -Xclang -fopenmp"
-	  fi
-	else
-	  echo "R CMD SHLIB supports OpenMP without any extra hint"
 	fi
 
 	# Clean up.
 	rm -f test-omp.* a.out
 	
 	if [ "$R_OPENMP" = "work" ]; then
+		echo "Configuring OpenMP compiler / linker flags for MacOS"
+		#make the Makevars temp file
+		if [ ! -e "./src/Makevars.tmp" ]; then
+			touch ./src/Makevars.tmp
+		fi
+		
 		echo "OMPBAM_PKG_CXXFLAGS = -Xclang -fopenmp" > ./src/Makevars.tmp
 		echo "OMPBAM_PKG_LIBS = -lomp" >> ./src/Makevars.tmp
 		echo "" >> ./src/Makevars.tmp
+		
+		cat ./src/Makevars.tmp ./src/Makevars.in > ./src/Makevars
+		rm ./src/Makevars.tmp
 	fi
 
 elif [ "$(expr substr $(uname -s) 1 5)" = "Linux" ] ;then
-	#if linux
+	#if linux, make the Makevars temp file
+	if [ ! -e "./src/Makevars.tmp" ]; then
+		touch ./src/Makevars.tmp
+	fi
 
 	echo "OMPBAM_PKG_CXXFLAGS = \$(SHLIB_OPENMP_CXXFLAGS)" > ./src/Makevars.tmp
 	echo "OMPBAM_PKG_LIBS = \$(SHLIB_OPENMP_CXXFLAGS)" >> ./src/Makevars.tmp
 	echo "" >> ./src/Makevars.tmp
+
+	cat ./src/Makevars.tmp ./src/Makevars.in > ./src/Makevars
+	rm ./src/Makevars.tmp
 fi
 
-cat ./src/Makevars.tmp ./src/Makevars.in > ./src/Makevars
-rm ./src/Makevars.tmp
+

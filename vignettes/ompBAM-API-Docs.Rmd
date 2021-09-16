@@ -113,14 +113,23 @@ use_ompBAM() has created two `make` files that instructs the compiler to link
 with OpenMP and the zlib library. You can view these files from within the
 `src/` directory.
 
-`Makevars` should contain the following:
+`Makevars.in` is a template `make` file and should contain the following:
 
 ```{}
-PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
-PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS)
+PKG_CXXFLAGS = $(OMPBAM_PKG_CXXFLAGS)
+PKG_LIBS = $(OMPBAM_PKG_LIBS)
 ```
 
-For windows installations, a second `make` file called "Makevars.win" is
+Additionally, a `configure` script is added to the root project directory. This
+is a shell script run when the package is built from source. It detects whether
+the operating system is Linux or MacOS, and whether OpenMP libraries are
+available for MacOS. It assigns the correct compile and linker flags to
+the `OMPBAM_PKG_CXXFLAGS` and `OMPBAM_PKG_LIBS` variables in the template
+`make` file. The contents of the `configure` script is beyond the scope of this
+documentation, but feel free to look at it. It is based on the `configure`
+script for the data.table R package on CRAN.
+
+For Windows installations, a second `make` file called "Makevars.win" is
 required. This is because zlib libraries are linked dynamically (see the
 zlibbioc vignette for more information). In windows systems, "Makevars.win"
 is used to build your package, and contains the following:
@@ -142,8 +151,19 @@ systems.
 
 Windows and Linux systems should support OpenMP natively. MacOS, however, does
 not. In order to set up OpenMP for MacOS, we recommend following this
-[guide](https://mac.r-project.org/openmp/). As can be seen, OpenMP for MacOS
-will continue to be a difficult issue. We recommend writing C++ code that
+[guide](https://mac.r-project.org/openmp/). In short, users of this package
+on MacOS must first install the correct OpenMP libraries. Secondly, specific
+flags must be set. This has already been done using the `configure` script
+and template `Makevars.in` file in section (1c).
+
+To simplify the installation of OpenMP libraries on MacOS:
+
+```{bash eval=FALSE}
+brew install libomp
+```
+
+As can be seen, OpenMP for MacOS will continue to be a difficult issue. 
+We recommend writing C++ code that
 is compatible for both OpenMP and non-OpenMP systems. For non-OpenMP systems,
 multi-threading can still be implemented via `BiocParallel::MulticoreParam()`
 but the session memory will be multiplied over the number of cores used.
