@@ -58,6 +58,7 @@ use_ompBAM <- function(path = ".") {
     makevars = file.path(proj_path, "src", "Makevars.in")
     makevars_win = file.path(proj_path, "src", "Makevars.win")
     configure = file.path(proj_path, "configure")
+    configure.win = file.path(proj_path, "configure.win")
     example_code = file.path(proj_path, "src/ompBAM_example.cpp")
     R_import_file = file.path(proj_path, "R/ompBAM_imports.R")
     usethis::use_directory("src")
@@ -72,23 +73,22 @@ use_ompBAM <- function(path = ".") {
 
     file.copy(system.file(
         file.path('examples', 'ompBAMExample', "src", "Makevars.in"), 
-            package = 'ompBAM'),
-        makevars)
+            package = 'ompBAM'), makevars)
     file.copy(system.file(
         file.path('examples', 'ompBAMExample', "src", "Makevars.win"), 
-            package = 'ompBAM'),
-        makevars_win)
+            package = 'ompBAM'), makevars_win)
     usethis::ui_done("Created src/Makevars.in and src/Makevars.win")
-    file.copy(system.file(
-        file.path('examples', 'ompBAMExample',"configure"), 
-            package = 'ompBAM'),
-        configure)
-    usethis::ui_done("Created configure script")
+    file.copy(system.file(file.path('examples','ompBAMExample',"configure"), 
+            package = 'ompBAM'), configure)
+    file.copy(system.file(file.path('examples','ompBAMExample',"configure.win"), 
+            package = 'ompBAM'), configure.win)
+    usethis::ui_done("Created configure scripts")
 
     file.copy(system.file(
         file.path('extdata', 'ompBAM_example.cpp'), package = 'ompBAM'),
         example_code)
-    usethis::ui_done("Created src/ompBAM_example.cpp with idxstats_pbam() function")
+    usethis::ui_done(
+        "Created src/ompBAM_example.cpp with idxstats_pbam() function")
     
     omp_use_dependency("Rcpp", "Imports", proj_path)
     omp_use_dependency("zlibbioc", "Imports", proj_path)
