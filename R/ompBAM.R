@@ -67,7 +67,7 @@ use_ompBAM <- function(path = ".") {
     write("#' @import Rcpp", R_import_file, append = TRUE, sep="\n")
     write("#' @import zlibbioc", R_import_file, append = TRUE, sep="\n")
     write("NULL", R_import_file, append = TRUE, sep="\n")
-    ui_done(paste("Created", R_import_file, "with roxygen tags"))
+    usethis::ui_done(paste("Created", R_import_file, "with roxygen tags"))
 
     file.copy(system.file(
         file.path('examples', 'ompBAMExample', "src", "Makevars"), 
@@ -77,12 +77,12 @@ use_ompBAM <- function(path = ".") {
         file.path('examples', 'ompBAMExample', "src", "Makevars.win"), 
             package = 'ompBAM'),
         makevars_win)
-    ui_done("Created src/Makevars and src/Makevars.win")
+    usethis::ui_done("Created src/Makevars and src/Makevars.win")
 
     file.copy(system.file(
         file.path('extdata', 'ompBAM_example.cpp'), package = 'ompBAM'),
         example_code)
-    ui_done("Created src/ompBAM_example.cpp with idxstats_pbam() function")
+    usethis::ui_done("Created src/ompBAM_example.cpp with idxstats_pbam() function")
     
     omp_use_dependency("Rcpp", "Imports", proj_path)
     omp_use_dependency("zlibbioc", "Imports", proj_path)
@@ -91,7 +91,7 @@ use_ompBAM <- function(path = ".") {
     omp_use_dependency("zlibbioc", "LinkingTo", proj_path)
     
     end_msg = paste(proj_name, "successfully created in", proj_path)
-    ui_done(end_msg)
+    usethis::ui_done(end_msg)
     
     end_msg2 = paste("Please run roxygen2 using devtools::document() before",
         "building the package.")
