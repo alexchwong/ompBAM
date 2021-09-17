@@ -57,8 +57,8 @@ inline int32_t pbam1_t::tlen(){
 inline uint32_t pbam1_t::cigar_size() {
   if(!validate()) return(0);
   if(core->n_cigar_op == 2) {
-    uint32_t* c1 = (uint32_t*)(read_buffer + 36 + core->l_read_name)
-    uint32_t* c2 = (uint32_t*)(read_buffer + 40 + core->l_read_name)
+    uint32_t* c1 = (uint32_t*)(read_buffer + 36 + core->l_read_name);
+    uint32_t* c2 = (uint32_t*)(read_buffer + 40 + core->l_read_name);
     if(
       cigar_op_to_char(*c1) == 'S' &&
       cigar_op_to_char(*c2) == 'N' &&
@@ -141,7 +141,7 @@ inline char pbam1_t::cigar_op(const uint16_t pos) {
   if(!validate()) return('\0');
   if(pos < cigar_size()) {
     uint32_t *tmp = cigar() + pos;
-    return(cigar_op_to_char(*tmp));
+    return(cigar_op_to_char(*tmp & 15));
   }
   return('\0');
 }
@@ -165,7 +165,7 @@ inline int pbam1_t::cigar_ops_and_vals(
 
   uint32_t *tmp = cigar();
   for(uint32_t i = 0; i < size; i++) {
-    ops.push_back(cigar_op_to_char(*tmp));
+    ops.push_back(cigar_op_to_char(*tmp & 15));
     vals.push_back(*tmp >> 4);
     tmp++;
   }

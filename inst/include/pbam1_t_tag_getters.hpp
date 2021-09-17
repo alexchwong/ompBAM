@@ -26,7 +26,6 @@ inline uint32_t pbam1_t::Tag_Size(const std::string tag) {
   return(search_tag_length(tag));
 }
 
-
 inline char pbam1_t::Tag_Type_SAM(const std::string tag) {
   char type = search_tag_type(tag);
   switch(type) {
@@ -45,7 +44,7 @@ inline char * pbam1_t::p_tagVal(const std::string tag) {
     char type = search_tag_type(tag);
     uint32_t tag_pos = search_tag_pos(tag);
     switch(type) {
-      case 'c': case 'C': case 's': case 'S': case 'i': case 'I': case 'f': case 'Z':
+      case 'A': case 'c': case 'C': case 's': case 'S': case 'i': case 'I': case 'f': case 'Z':
         return(read_buffer + tag_pos + 3);
       case 'B':
         // User's responsibility to obtain length of this buffer
@@ -58,11 +57,10 @@ inline char * pbam1_t::p_tagVal(const std::string tag) {
 }
 
 inline char pbam1_t::tagVal_A(const std::string tag) {
-  if(!validate()) {
+  if(validate()) {
     if(search_tag_type(tag) == 'A') {
       uint32_t tag_pos = search_tag_pos(tag);
-      char * tmp = read_buffer + tag_pos + 3;
-      return(*tmp);
+      return(*(read_buffer + tag_pos + 3));
     }
   }
   return('\0');

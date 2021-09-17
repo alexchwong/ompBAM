@@ -1406,45 +1406,15 @@ read.isReal();  // Returns true
 ## (4e) Getters of Read Core Data
 
 The core is the first 36 bytes of the alignment read data. It
-contains constant-length data including chromosome refID and alignment position.
+contains constant-length data including chromosome refID and the left-most
+genomic coordinates of the alignment.
 It also contains metadata including cigar size and sequence length.
 
 #### Usage
 
 ```{Rcpp, eval=FALSE}
-uint32_t block_size();
-int32_t refID();
-int32_t pos();
-uint8_t l_read_name();
-uint8_t mapq();
-uint16_t bin();
-uint16_t n_cigar_op();
-uint32_t flag();
-uint32_t l_seq();
-int32_t next_refID();
-int32_t next_pos();
-int32_t tlen();
-```
-
-#### Parameters
-
-None
-
-#### Return value
-
-See examples below with comments describing the return values. 
-
-Also, it is helpful to refer to 
-[SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf) - section
-4.2 for further details regarding the BAM format.
-
-#### Examples
-
-```{Rcpp, eval=FALSE}
-pbam1_t read = inbam.supplyRead(i);
-
-read.block_size();      // Size of the data
-read.refID();           // refID of chromosome of this alignment
+uint32_t block_size();  // Size of the alignment data (in bytes)
+int32_t refID();        // refID of chromosome of this alignment
 int32_t pos();          // leftmost 0-based genome coordinate of this alignment
 uint8_t l_read_name();  // length of read name, including terminating '\0' null
 uint8_t mapq();         // mapping quality
@@ -1455,6 +1425,37 @@ uint32_t l_seq();       // Sequence length
 int32_t next_refID();   // refID of next segment
 int32_t next_pos();     // pos of next segment
 int32_t tlen();         // template length
+```
+
+#### Parameters
+
+None
+
+#### Return value
+
+See comments in the "Usage" section above. Also, it is helpful to refer to 
+[SAMv1.pdf](https://samtools.github.io/hts-specs/SAMv1.pdf) - section
+4.2 for further details regarding the BAM format.
+
+#### Examples
+
+```{Rcpp, eval=FALSE}
+pbam1_t read = inbam.supplyRead(i);
+
+Rcpp::Rcout << "The alignment block size is " << read.block_size() << '\n';
+Rcpp::Rcout << "The alignment refID is " << read.refID() << '\n';
+Rcpp::Rcout << "The alignment left-most coordinate is " << read.pos() << '\n';
+Rcpp::Rcout << "The read name length is "
+  << unsigned(read.l_read_name()) << '\n';
+Rcpp::Rcout << "The alignment mapping quality is " 
+  << unsigned(read.mapq()) << '\n';
+Rcpp::Rcout << "The BAI index bin is " << read.bin() << '\n';
+Rcpp::Rcout << "The number of cigar ops is " << read.n_cigar_op() << '\n';
+Rcpp::Rcout << "The flag binary value is " << read.flag() << '\n';
+Rcpp::Rcout << "The sequence length is " << read.l_seq() << '\n';
+Rcpp::Rcout << "The next alignment refID is " << read.next_refID() << '\n';
+Rcpp::Rcout << "The next alignment pos " << read.next_pos() << '\n';
+Rcpp::Rcout << "The alignment template length is " << read.tlen() << '\n';
 ```
 
 ## (4f) Getters of Cigar Data
@@ -1537,7 +1538,7 @@ read.cigar(cigar_string);
 Rcpp::Rcout << "The cigar string is " << cigar_string << '\n';
 
 Rcpp::Rcout << "The cigar operation at index 0 is " 
-    << string(read.cigar_op(0)) 
+    << read.cigar_op(0)
     << " and the length to apply this is " 
     << std::to_string(read.cigar_val(0)) << '\n';
 
@@ -1546,7 +1547,7 @@ std::vector<uint32_t> vals;
 read.cigar_ops_and_vals(ops, vals);
 
 Rcpp::Rcout << "The cigar operation at index 0 is " 
-    << string(ops.at(0)) 
+    << ops.at(0) 
     << " and the length to apply this is " 
     << std::to_string(vals.at(0)) << '\n';
 ```
@@ -1602,16 +1603,24 @@ It is helpful to refer to
 #### Examples
 
 ```{Rcpp, eval=FALSE}
+pbam1_t read = inbam.supplyRead(i);
+
 std::string sequence;
 std::vector<uint8_t> qual_scores;
 
-pbam1_t read = inbam.supplyRead(i);
 read.seq(sequence);
 read.qual(qual_scores);
 
-Rcpp::Rcout << "The sequence is " << sequence 
-    << " and the quality score of the first nucleotide is " 
-    << std::to_string(qual_scores.at(0)) << '\n';
+Rcpp::Rcout << "The sequence is " << sequence << '\n';
+
+if(qual_scores.at(0) != 255) {
+  // After checking quality scores are not missing, convert to printable ASCII
+  for(unsigned int k = 0; k < qual_scores.size(); k++) {
+    qual_scores.at(k) += 33;
+  }
+  Rcpp::Rcout << "The Phred-scale per-nucleotide score ASCII is " 
+    << std::string(qual_scores.begin(), qual_scores.end()) << '\n';
+}
 ```
 
 ## (4h) Tag Getters
@@ -1748,7 +1757,7 @@ for(unsigned int j = 0; j < tags.size(); j++) {
     case 'S':
       Rcpp::Rcout << std::to_string(read.tagVal_S(tags.at(j))) << '\t'; break; 
     case 'i':
-      Rcpp:: << std::to_string(read.tagVal_i(tags.at(j))) << '\t'; break; 
+      Rcpp::Rcout << std::to_string(read.tagVal_i(tags.at(j))) << '\t'; break; 
     case 'I':
       Rcpp::Rcout << std::to_string(read.tagVal_I(tags.at(j))) << '\t'; break; 
     case 'f':
@@ -1756,11 +1765,12 @@ for(unsigned int j = 0; j < tags.size(); j++) {
     case 'Z':
       read.tagVal_Z(tags.at(j), Z_val);
       Rcpp::Rcout << Z_val << '\t'; break;
-    case 'B'
+    case 'B':
       // write code to store B-type tag in vector of appropriate type
-	  Rccp::Rcout << '\t'; break;
+      Rcpp::Rcout << '\t'; break;
   }
 }
+Rcpp::Rcout << '\n';	// Line break
 ```
 
 # (5) SessionInfo
