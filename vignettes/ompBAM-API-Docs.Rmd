@@ -1625,7 +1625,7 @@ if(qual_scores.at(0) != 255) {
 
 ## (4h) Tag Getters
 
-Tags are auxiliary information about each read.
+Tags are auxiliary information about each alignment.
 
 #### Usage
 
@@ -1647,22 +1647,22 @@ char * p_tagVal(const std::string tag);
 // - For tags of type AcCsSiIf
 // Returns '\0' or 0 if tag does not exist or if the type is inappropriate
 // for the given tag
-char tagVal_A(const std::string tag);   
-int8_t tagVal_c(const std::string tag);
-uint8_t tagVal_C(const std::string tag);
-int16_t tagVal_s(const std::string tag);
-uint16_t tagVal_S(const std::string tag);
-int32_t tagVal_i(const std::string tag);
-uint32_t tagVal_I(const std::string tag);
-float tagVal_f(const std::string tag);
+char tagVal_A(const std::string tag);       // tags of type 'A'
+int8_t tagVal_c(const std::string tag);     // tags of type 'c'
+uint8_t tagVal_C(const std::string tag);    // tags of type 'C'
+int16_t tagVal_s(const std::string tag);    // tags of type 's'
+uint16_t tagVal_S(const std::string tag);   // tags of type 'S'
+int32_t tagVal_i(const std::string tag);    // tags of type 'i'
+uint32_t tagVal_I(const std::string tag);   // tags of type 'I'
+float tagVal_f(const std::string tag);      // tags of type 'f'
 
 // Fills given string reference by given Z-type tag
 // Returns tag length of string if success, -1 if fail
-int tagVal_Z(const std::string tag, std::string & dest);    // 'Z'
+int tagVal_Z(const std::string tag, std::string & dest);  // tags of type 'Z'
 
 // Returns a B-tag by reference to its respective type
 // Returns tag length if success, -1 if fail
-int tagVal_B(const std::string tag, std::vector<int8_t> & dest);   // 'B, c'
+int tagVal_B(const std::string tag, std::vector<int8_t> & dest);     // 'B, c'
 int tagVal_B(const std::string tag, std::vector<uint8_t> & dest);    // 'B, C'
 int tagVal_B(const std::string tag, std::vector<int16_t> & dest);    // 'B, s'
 int tagVal_B(const std::string tag, std::vector<uint16_t> & dest);   // 'B, S'
@@ -1678,7 +1678,7 @@ store a list of available tags for the read.
 * `const std::string tag` A string containing the two-character tag to query
 * `std::string & dest` A string reference to store the given string in Z-type
 tags.
-* `std::vector<T> & dest A reference to a vector of type <T> in which to store
+* `std::vector<T> & dest` A reference to a vector of type <T> in which to store
 the data contained in 'B'-type tags.
 
 #### Return value
