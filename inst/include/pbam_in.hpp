@@ -69,9 +69,9 @@ class pbam_in {
     
     /* 
       Returns a pbam1_t of the next read to be returned by thread 
-        (as specified by thread_number).
+        (as specified by thread_id).
       This function is designed to be called within an OpenMP parallel loop, where:     
-      - thread_number must be between [0, n_threads - 1].
+      - thread_id must be between [0, n_threads - 1].
       - supplyRead() should be called until it returns an invalid read.
       
       supplyRead() will return an invalid read if:
@@ -85,9 +85,9 @@ class pbam_in {
       Call pbam1_t::validate() to check whether the thread returned by
         this function is a "valid" read.
     */
-    pbam1_t supplyRead(const unsigned int thread_number = 0);
+    pbam1_t supplyRead(const unsigned int thread_id = 0);
     
-    size_t remainingThreadReadsBuffer(const unsigned int thread_number = 0);
+    size_t remainingThreadReadsBuffer(const unsigned int thread_id = 0);
     
     // Returns the size of the opened BAM
     size_t GetFileSize() { return(IS_LENGTH); };

@@ -17,7 +17,7 @@ abstract:
     based on OpenMP, allowing developers to implement OpenMP-based parallelism 
     for the sequential reading of BAM files. *ompBAM* makes it easy by handling 
     all the parallel file-access and bgzf decompression, allowing developers to 
-    focus on multi-threaded handling of individual reads.
+    focus on multi-threaded handling of individual alignments / reads.
     *ompBAM* package version `r packageVersion("ompBAM")`
 vignette: >
     %\VignetteIndexEntry{ompBAM API Documentation}
@@ -32,16 +32,35 @@ knitr::opts_chunk$set(
 )
 ```
 
+# (0) Installation
+
+To install ompBAM, start R (version "4.1") and enter: 
+
+```{r eval=FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("ompBAM")
+```
+
+To create new packages using ompBAM, we recommend installing `devtools` and
+`usethis` packages from CRAN:
+
+```{r eval=FALSE}
+install.packages(c("devtools", "usethis"))
+```
+
 # (1) Setting up a new R package to include ompBAM
 
-*ompBAM* provides a one-step function that creates a new package R project in
-a new directory (or adds requisite files to an existing project). The function
-is designed using the *usethis* package. The user supplies a directory path
-which is assumed to be the name of the new package.
+*ompBAM* provides a one-step function called `use_ompBAM()` that creates a new 
+package R project in a new directory (or adds requisite files to an existing 
+project). The function is similar to those in the *usethis* package. The user 
+supplies a directory path and the directory containing the package must also be 
+the name of the new package.
 
 ## (1a) Making a new package that compiles with ompBAM
 
-Using the R function `use_ompBAM()`, we create a new package inside the 
+Using the R function `use_ompBAM()`, we can create a new package inside the 
 R-generated temporary directory as an example:
 
 ```{r}
@@ -51,23 +70,30 @@ use_ompBAM(path)
 ```
 
 We recommend the user run this function in a project directory of their choice
-and **NOT `tempdir()`**, as the temp directory is destroyed on each R session 
-restart! We only demonstrate using `tempdir()` here to demonstrate the typical
-output of the `use_ompBAM()` function.
+and **NOT use `tempdir()`**, as the temp directory is destroyed on each R 
+session restart! We only demonstrate using `tempdir()` here to demonstrate the
+typical output of the `use_ompBAM()` function.
+
+Users following this vignette should instead use something like:
+
+```{r eval=FALSE}
+use_ompBAM("/path/to/myPkgName")
+```
 
 In the remainder of this section we will examine this newly-created project and 
 explain the importance of the configurations made. 
 
-After running ompBAM(), please open the `myPkgName.Rproj` within RStudio.
+After running ompBAM(), please open the newly-generated `myPkgName.Rproj` 
+from within RStudio.
 
 Note that the newly-created package is designed to run with roxygen2. We
-recommend users build their packages using roxygen2. After installing roxygen2,
-simply run devtools::document() to run roxygen2 to process these tags.
+recommend users build their package documentation and NAMESPACE using roxygen2.
+To do this, simply run devtools::document() to process roxygen2 tags.
 
 ## (1b) Dependencies required to compile with ompBAM
 
 To compile with ompBAM capabilities, the package must import both Rcpp and
-zlibbioc. Check that the following is added to the DESCRIPTION file:
+zlibbioc. Check that the following has been added to the DESCRIPTION file:
 
 ```{}
 Imports: Rcpp, zlibbioc
@@ -107,13 +133,20 @@ Also, you may have noticed, the included source code may have been prompted to
 compile. Don't worry about this, we will explain it in detail in the next
 section.
 
-## (1c) Makefile
+## (1c) Make Files
 
 use_ompBAM() has created two `make` files that instructs the compiler to link
 with OpenMP and the zlib library. You can view these files from within the
 `src/` directory.
 
-`Makevars.in` is a template `make` file and should contain the following:
+Make files instruct the C++ compiler to link to the appropriate libraries at
+compile-time. For R packages, these are called `Makevars` and are streamlined
+`make` files. For more information, refer to (Writing R Extensions - Using 
+MakeVars)
+[https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Using-Makevars]
+
+`Makevars.in` is a template `make` file used by Linux and MacOS, and should 
+contain the following:
 
 ```{}
 PKG_CXXFLAGS = $(OMPBAM_PKG_CXXFLAGS)
@@ -151,12 +184,13 @@ systems.
 
 Windows and Linux systems should support OpenMP natively. MacOS, however, does
 not. In order to set up OpenMP for MacOS, we recommend following this
-[guide](https://mac.r-project.org/openmp/). In short, users of this package
-on MacOS must first install the correct OpenMP libraries. Secondly, specific
-flags must be set. This has already been done using the `configure` script
-and template `Makevars.in` file in section (1c).
+[guide](https://mac.r-project.org/openmp/). In short, to utilise OpenMP on MacOS
+users must first install the correct OpenMP libraries. Secondly, specific
+compiler and linker flags must be set. This has already been done using the 
+`configure` script and template `Makevars.in` file as described in section (1c).
 
-To simplify the installation of OpenMP libraries on MacOS:
+To simplify the installation of OpenMP libraries on MacOS, instruct package 
+users to run the following:
 
 ```{bash eval=FALSE}
 brew install libomp
@@ -296,6 +330,8 @@ you will still need to create wrapper functions from within R, and export them,
 for example:
 
 ```{r eval=FALSE}
+# Add the following code to an `.R` file and place it in the `R/` subdirectory
+
 #' @export
 idxstats <- function(bam_file, n_threads) {
   idxstats_pbam(bam_file, n_threads)
@@ -314,8 +350,9 @@ find the header files in the `include/` directory within the installation path
 of ompBAM, but we endeavour to explain as much as you need to know in this
 document.  For now, we call `pbam_in::openFile()` which directs the `pbam_in`
 object `inbam` to open and examine the given BAM file. `openFile()` takes a
-`std::string` for the BAM file, and an `unsigned int` to specify the number
-of threads to initialize pbam_in for parallel file reading and decompression.
+`std::string` for the path to the BAM file, and an `unsigned int` to specify the
+number of threads to initialize pbam_in for parallel file reading and
+decompression.
 
 ## (2d) Obtaining chromosome names and lengths
 
@@ -329,9 +366,9 @@ To obtain the chromosome names and lengths, and to check that the BAM file is
 indeed valid:
 
 ```{Rcpp eval=FALSE}
-  std::vector<std::string> s_chr_names;
-  std::vector<uint32_t> u32_chr_lens;
-  int chrom_count = inbam.obtainChrs(s_chr_names, u32_chr_lens);
+std::vector<std::string> s_chr_names;
+std::vector<uint32_t> u32_chr_lens;
+int chrom_count = inbam.obtainChrs(s_chr_names, u32_chr_lens);
 ```
 
 Here, we create a string vector to store the chromosome names, and an unsigned
@@ -342,7 +379,9 @@ number if the BAM header read fails, and will return the number of chromosomes
 if the function is run successfully. We can check for this with the following:
 
 ```{Rcpp eval=FALSE}
-  if(chrom_count <= 0) return(-1); // tells idxstats_pbam to return an error
+// tells idxstats_pbam to return -1 to exit the function if the BAM file
+// has zero chromosomes or is not a valid BAM file
+if(chrom_count <= 0) return(-1); 
 ```
 
 ## (2e) Constructing a loop to read the BAM file using ompBAM
@@ -432,7 +471,7 @@ pbam1_t read(inbam.supplyRead(i));
 ```
 
 As the above code is contained within the parallel `FOR` loop, 
-`i` refers to the thread-number. For n threads, `i` will take
+`i` here refers to the thread ID. For n threads, `i` will take
 any integer between `0` and `n-1`. `supplyRead()` will return the next read in
 the thread-specific buffer which we receive by calling it within the `pbam1_t`
 constructor at declaration. 
@@ -447,9 +486,9 @@ read = inbam.supplyRead(i);
 ### (2g:i) Checking "validity" of reads and "realizing" reads
 
 `pbam1_t` is an ompBAM object that is designed to store and get values contained
-in a single aligned BAM read. We will discuss its full functionality in a later
-section. For now, the most important function is `pbam1_t::validate()`, which
-will check whether the obtained read actually contains any data.
+in a single aligned BAM read. We will discuss its full functionality in
+section (4). For now, the most important function is `pbam1_t::validate()`,
+which will check whether the obtained read actually contains any data.
 
 A `pbam1_t` can be "invalid" for several reasons. The most important reason is
 when `supplyRead()` has reached the end of its buffer. When this occurs,
@@ -459,7 +498,9 @@ So, to profile all the reads in a single thread, we simply call `supplyRead()`
 for thread `i` until it returns an invalid read, using the following:
 
 ```{Rcpp eval=FALSE}
+// Gets the first read from the thread-specific buffer
 pbam1_t read(inbam.supplyRead(i));
+
 while(read.validate()) {
   // Do stuff with this valid read 
 
@@ -470,9 +511,9 @@ while(read.validate()) {
 
 `pbam1_t::validate()` will return `false` for two other reasons.
 
-(1) If the BAM contains data corruption, `validate()` will return false.
-`validate()` checks the first 4 bytes of the read which returns the size in
-bytes of the read. It then checks whether this is larger than the size of the
+(1) If the BAM contains corrupt data, `validate()` will return false.
+`validate()` checks the first 4 bytes of the read which returns the size of the 
+read (in bytes). It then checks whether this is larger than the size of the
 individual components, including read name, cigar, sequence and quality scores.
 If there is corrupt data, we might expect that this will trigger a failure and
 safely abort the program, as the next call to `fillReads()` will trigger an
@@ -523,7 +564,8 @@ real_read.validate();     // returns true
 ```
 
 NB: the `pbam1_t::realize()` and `pbam1_t::isReal()` functions are not 
-demonstrated in the included example code created by `use_ompBAM()`
+demonstrated in the included example code created by `use_ompBAM()`. For more
+information about these functions, refer to Section (4c)
 
 ## (2h) Counting chromosome-specific reads
 
@@ -577,8 +619,8 @@ code in this loop. We will discuss the things we have not already addressed.
 ### (2h:i) Obtaining the chromosome ID of each aligned read
 
 The `pbam1_t::refID()` returns the `refID` of the aligned read. Rather than
-the name of the chromosome, it returns the ID as a number from `0` to `n-1` for
-an n-chromosome genome. These are in the same order as described in the BAM
+the name of the chromosome, it returns the ID as a number from `0` to `k-1` for
+an `k`-chromosome genome. These are in the same order as described in the BAM
 header. So here, we simply check whether the read is mapped to a valid 
 chromosome refID, and add it to the thread-specific read container vector:
 
@@ -588,16 +630,19 @@ if(read.refID() >= 0 && read.refID() < chrom_count) {
 }
 ```
 
+For other "getter" functions of pbam1_t, refer to Section (4e-h).
+
 ### (2h:ii) Tallying reads to a variable external to the parallel FOR loop
 
 Any variables declared outside the OpenMP `FOR` loop is accessible to code
-within the parallel loop. This can be both a blessing and a curse. It can be a
-curse as trouble (a.k.a. `race condition`) can happen if multiple threads
-write to the variable at the same time. To prevent this, we declare that only 1
+within the parallel loop. This can be both a blessing and a curse. It can cause
+problems when multiple threads write to the variable at the same time (known as
+a "race condition"). To prevent this, we declare that only 1
 thread can run the code that is responsible for accessing the external variable
-`total_reads`, using the `#pragma omp critical` directive. Of course, we declare
-this within an `#ifdef _OPENMP` directive so that compilers without OpenMP will
-ignore it.
+`total_reads`, using the `#pragma omp critical` directive. This directive
+instructs the following block of code can only be run by a single thread at
+any one time. Of course, we declare this within an `#ifdef _OPENMP` directive so
+that compilers without OpenMP will ignore it.
 
 ## (2i) Closing the BAM file
 
@@ -611,8 +656,8 @@ This will instruct `pbam_in` to close the file that it opened internally using
 the ifstream object contained within. It will also destroy all memory associated
 with its file and decompressed data buffers, thereby safely freeing up memory.
 This is also called on destruction of the `pbam_in` object, so files are safely
-closed on termination of the function. Of course, `pbam1_t` reads will
-invalidate once these buffers are cleared, except "real" `pbam1_t` reads
+closed when the `pbam_in` object goes out of scope. Of course, `pbam1_t` reads
+will invalidate once these buffers are cleared, except "real" `pbam1_t` reads
 created via `pbam1_t::realize()`.
 
 ## (2j) Summarizing the tallied reads
@@ -654,12 +699,14 @@ source_path = system.file("examples", "ompBAMExample", "src",
     package = "ompBAM")
 ```
 
+Alternatively, refer to Section (3i) for an example RcppProgress bar
+
 # (3) pbam_in function documentation
 
 The `pbam_in` object is responsible for opening BAM files for sequential
 multi-threaded BAM processing.
 
-Internally, pbam_in checks BAM files for truncation / data corruption / other
+Internally, pbam_in checks BAM files for truncation, data corruption and other
 issues. Then it reads and decompresses BAM files using multiple threads.
 Applications using *ompBAM* simply have to retrieve reads from the `pbam_in`
 object using the `supplyRead()` function, after "priming the pump" to fill
@@ -674,11 +721,11 @@ The "Step-by-step guide" provides the context behind all the functions mentioned
 in this section.
 
 Please note that currently, *ompBAM* only supports BAM file reading. BAM writing
-may be supported in later versions.
+may be supported in later versions of *ompBAM*.
 
 ## (3a) Constructor
 
-Creates a pbam_in object
+Creates a pbam_in object.
 
 #### Usage
 
@@ -688,21 +735,21 @@ pbam_in();
 
 // Constructor with custom settings (for advanced users only)
 pbam_in(
-      const size_t file_buffer_cap, 
-      const size_t data_buffer_cap, 
-      const unsigned int chunks_per_file_buffer,
-      const bool read_file_using_multiple_threads = true
-    );        
+  const size_t file_buffer_cap, 
+  const size_t data_buffer_cap, 
+  const unsigned int chunks_per_file_buffer,
+  const bool read_file_using_multiple_threads = true
+);        
 ```
 
 #### Parameters
 
-* `const size_t file_buffer_cap`: The size (in bytes) of each of the two file 
-buffers (default 500 Mb)
-* `const size_t data_buffer_cap`: The size (in bytes) of the data buffer 
-containing uncompressed data (default 1 Gb)
-* `const unsigned int chunks_per_file_buffer`: How many chunks should the file 
-buffer be divided (default 5). See details
+* `const size_t file_buffer_cap`: (default 500 Mb) The size (in bytes) of each
+ of the two file buffers 
+* `const size_t data_buffer_cap`: (default 1 Gb) The size (in bytes) of the data
+buffer containing uncompressed data 
+* `const unsigned int chunks_per_file_buffer`: (default 5) How many chunks
+should the file buffer be divided. See details
 * `const bool read_file_using_multiple_threads` (default true): Whether to use 
 multiple threads to read compressed data from file.
 
@@ -727,25 +774,35 @@ first.
 
 Subsequent calls to `pbam_in::fillReads()` will check whether the number
 of chunks stored in the second file buffer exceeds the number of chunks already 
-processed in the first file buffer. Should the amount of unprocessed data in the
-first file buffer drop below one chunk size amount, a "buffer swap" occurs where
-the data is copied from the second file buffer to the first. Thereafter the
-process continues until the entire BAM file is read and decompressed.
+processed in the first file buffer. Should this occur, it will read compressed
+data from the BAM file and place this in the second file buffer. When the amount
+of unprocessed data in the first file buffer drop below one chunk size amount, a
+"buffer swap" occurs where the data is copied from the second file buffer to the
+first. Thereafter, the process continues until the entire BAM file has been read
+and decompressed.
 
-As can be seen, the optimal values will depend on the compression ratio of the
+As can be seen, the optimal values of `file_buffer_cap`, `data_buffer_cap` and
+`chunks_per_file_buffer` will depend on the compression ratio of the
 BAM file, the I/O speed of the storage device, as well as the available memory.
 We believe the default settings is a good starting point and will consume
 approximately 2 Gb of RAM.
 
-Storage on traditional HDD may experience lower file I/O in multi-threaded
-applications, whereas solid-state drives and some RAID setups may favour multi-
-threaded file input. To instruct `pbam_in` to read the file using one core and
-decompress with the remaining cores, set 
-`read_file_using_multiple_threads = false`.
+Storage on hard disk drives (with spinning components) typically found on 
+traditional desktop computers may experience lower file I/O in multi-threaded
+applications. Solid-state drives (typically found in modern notebook laptops) 
+and some RAID setups may favour multi-threaded file input. To instruct `pbam_in`
+to read the file using a single thread and decompress with the remaining cores,
+set `read_file_using_multiple_threads = false`.
 
 Note that copy constructor and copy assignment operators are disabled for 
-`pbam_in`. Thus, compiling code containing things like `pbam_in bam2 = bam1;`
-will fail at compile-time.
+`pbam_in`. Thus, code containing things like the following will fail at 
+compile-time:
+
+```{Rcpp eval=FALSE}
+pbam_in bam1;			// Default constructor (will compile)	
+pbam_in bam2 = bam1;	// copy assignment operation (will FAIL)
+pbam_in bam3(bam1);		// copy constructor (will FAIL)
+```
 
 #### Examples
 
@@ -855,7 +912,7 @@ None
 
 Note that `closeFile()` internally calls `reset()`, which is also called at
 object destruction. Thus, any open BAM files are closed when the `pbam_in`
-object goes out of scope. This function is provided if closing the `ifstream`s 
+object goes out of scope. This function is provided if closing the `ifstream`
 associated with the BAM file, and/or freeing up RAM associated with `pbam_in`,
 is desired.
 
@@ -967,17 +1024,18 @@ while(0 == inbam.fillReads()) {
 
 ## (3g) supplyRead()
 
-Reads the data buffer to supply a single aligned read from the BAM file.
+Reads the thread-specific data buffer to supply a single aligned read from the
+BAM file.
 
 #### Usage
 
 ```{Rcpp eval=FALSE}
-pbam1_t supplyRead(const unsigned int thread_number = 0);
+pbam1_t supplyRead(const unsigned int thread_id = 0);
 ```
 
 #### Parameters
 
-* `const unsigned int thread_number` The index of the thread-specific buffer
+* `const unsigned int thread_id` The index of the thread-specific buffer
 from which to retrieve the read.
 
 #### Return value
@@ -1027,13 +1085,13 @@ specific buffer
 
 ```{Rcpp eval=FALSE}
 size_t remainingThreadReadsBuffer(
-    const unsigned int thread_number = 0
+    const unsigned int thread_id = 0
 );
 ```
 
 #### Parameters
 
-* `const unsigned int thread_number` (default 0) The index of the thread-
+* `const unsigned int thread_id` (default 0) The index of the thread-
 specific buffer from which to retrieve the read.
 
 #### Return value
@@ -1079,26 +1137,57 @@ size_t IncProgress();
 
 #### Return value
 
-`GetFileSize()` Returns the file size of the BAM file
-`GetProgress()` Returns the total number of bytes processed (read and 
-decompressed)
-`IncProgress()` Returns the number of bytes processed since the last call to 
+* `GetFileSize()` Returns the file size of the BAM file
+* `GetProgress()` Returns the total number of bytes in the BAM file that has
+been processed (i.e. read and decompressed)
+* `IncProgress()` Returns the number of bytes processed since the last call to 
 `IncProgress()`
+
+#### Details
+
+These functions are useful for addition of progress bars. The following example
+demonstrates a simple method of setting up an `RcppProgress` progress bar.
 
 #### Examples
 
 ```{Rcpp eval=FALSE}
-std::string bam_file = "example.bam";
+// [[Rcpp::depends(RcppProgress)]]
+#include <progress.hpp>
 
-pbam_in inbam;
-inbam.openFile(bam_file, 4);
+// [[Rcpp::depends(ompBAM)]]
+#include <ompBAM.hpp>
 
-size_t file_size = inbam.GetFileSize();
-size_t bytes_read = inbam.GetProgress();
+int main() {
+  std::string bam_file = "example.bam";
 
-inbam.fillReads();
-size_t bytes_read_total = inbam.GetProgress();
-size_t bytes_read_since_last_asked = inbam.IncProgress();
+  pbam_in inbam;
+  inbam.openFile(bam_file, 4);
+
+  size_t file_size = inbam.GetFileSize();
+  size_t bytes_read = inbam.GetProgress();
+
+  // Initialize the RcppProgress bar with "100%" set as the size of the BAM file
+  Progress p(inbam.GetFileSize());
+  while(0 == inbam.fillReads()) {
+    // Increment the progress bar by the number of bytes incrementally processed
+    p.increment(inbam.IncProgress());
+
+    #ifdef _OPENMP
+    #pragma omp parallel for num_threads(4) schedule(static,1)
+    #endif
+    for(unsigned int i = 0; i < 4; i++) {
+      pbam1_t read(inbam.supplyRead(i));
+      // Keep looping while reads are valid
+      while(read.validate()) {
+	    read = inbam.supplyRead(i);     
+      }
+    }
+  }
+  // Final increment to RcppProgress bar to fill it to 100%
+  p.increment(inbam.IncProgress());
+
+  return(0);
+}
 ```
 
 
@@ -1155,7 +1244,7 @@ result in invalidation of such reads. This is important when data persistence
 is required, e.g. when matching paired reads in coordinate-sorted paired-end
 RNA-seq data.
 
-NB: Generally speaking, users are not expected to use the constructor to create
+NB: In typical usage, users are not expected to use the constructor to create
 "real" reads. Instead, it is better to first obtain the virtual read using
 `pbam_in::supplyRead()`, and subsequently "realize" the read via 
 `pbam1_t::realize()`.

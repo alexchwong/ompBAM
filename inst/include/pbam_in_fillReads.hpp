@@ -84,17 +84,17 @@ inline int pbam_in::fillReads() {
 }
 
 // Internal
-inline size_t pbam_in::remainingThreadReadsBuffer(const unsigned int thread_number) {
-  if(thread_number > threads_to_use) {
+inline size_t pbam_in::remainingThreadReadsBuffer(const unsigned int thread_id) {
+  if(thread_id > threads_to_use) {
     Rcpp::Rcout << "pbam_in object was not initialized with " << 
-      thread_number << " threads\n";
+      thread_id << " threads\n";
     return(0);
   }
-  if(read_cursors.size() <= thread_number) {
-    Rcpp::Rcout << "Thread " << thread_number << " is not initialized with reads\n";
+  if(read_cursors.size() <= thread_id) {
+    Rcpp::Rcout << "Thread " << thread_id << " is not initialized with reads\n";
     return(0);
   }
-  return(read_ptr_ends.at(thread_number) - read_cursors.at(thread_number));
+  return(read_ptr_ends.at(thread_id) - read_cursors.at(thread_id));
 }
 
 #endif
