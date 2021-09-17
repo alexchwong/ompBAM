@@ -54,10 +54,22 @@ inline int32_t pbam1_t::tlen(){
 // This is to accomodate for long reads which may contain >65535 operations
 // For long reads, the cigar is stored as a "CG" tag of type B,I
 // If "CG" tag exists, return its length; otherwise return n_cigar_op
-inline uint32_t pbam1_t::cigar_size(){
-  uint32_t size = search_tag_length("CG");
-  if(size == 0) return((uint32_t)core->n_cigar_op);
-  return(size);
+inline uint32_t pbam1_t::cigar_size() {
+  if(!validate()) return(0);
+  if(core->n_cigar_op == 2) {
+    uint32_t* c1 = (uint32_t*)(read_buffer + 36 + core->l_read_name)
+    uint32_t* c2 = (uint32_t*)(read_buffer + 40 + core->l_read_name)
+    if(
+      cigar_op_to_char(*c1) == 'S' &&
+      cigar_op_to_char(*c2) == 'N' &&
+      *c1 >> 4 == core->l_seq
+    ) {
+      uint32_t size = search_tag_length("CG");
+      if(size > 65535) return(size);
+      return(0);
+    }
+  }
+  return((uint32_t)core->n_cigar_op);
 }
 
 // ************************** Buffer-based  Getters ****************************
@@ -76,7 +88,7 @@ inline char * pbam1_t::read_name() {
 
 inline uint32_t * pbam1_t::cigar() {
   if(validate()) {
-    if(search_tag_length("CG") > 0) return((uint32_t*)p_tagVal("CG"));
+    if(cigar_size() > 65535) return((uint32_t*)p_tagVal("CG"));
     return((uint32_t*)(read_buffer + 36 + core->l_read_name));
   }
   return(NULL);
