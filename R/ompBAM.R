@@ -38,6 +38,10 @@ NULL
 #' ompBAM. It sets up the requisite dependencies and 'Make' files
 #' so that the source code will successfully compile and link to the appropriate
 #' external libraries (OpenMP, zlib) required for ompBAM.
+#' @details OpenMP is not natively supported on MacOS. To compile ompBAM_based
+#'   packages with OpenMP on MacOS, users should install the requisite OpenMP
+#'   libraries. For details, refer to 
+#'   [this guide](https://mac.r-project.org/openmp/)
 #' @param path The path to the desired directory in which to set up a new
 #'   R package. The directory name is assumed to be the package name.
 #' @return None
@@ -45,6 +49,7 @@ NULL
 #' path <- file.path(tempdir(), "myPkgName")
 #' use_ompBAM(path)
 #'
+#' @md
 #' @export
 use_ompBAM <- function(path = ".") {
     proj_path = .check_ompBAM_path(path)

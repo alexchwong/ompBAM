@@ -14,11 +14,17 @@ R package. The directory name is assumed to be the package name.}
 None
 }
 \description{
-This function creates a new package in the given directory (unless one 
+This function creates a new package in the given directory (unless one
 already exists), then creates the necessary changes to run
 ompBAM. It sets up the requisite dependencies and 'Make' files
 so that the source code will successfully compile and link to the appropriate
 external libraries (OpenMP, zlib) required for ompBAM.
+}
+\details{
+OpenMP is not natively supported on MacOS. To compile ompBAM_based
+packages with OpenMP on MacOS, users should install the requisite OpenMP
+libraries. For details, refer to
+\href{https://mac.r-project.org/openmp/}{this guide}
 }
 \examples{
 path <- file.path(tempdir(), "myPkgName")
