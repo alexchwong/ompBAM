@@ -15,15 +15,19 @@ None
 }
 \description{
 This function creates a new package in the given directory (unless one
-already exists), then creates the necessary changes to run
-ompBAM. It sets up the requisite dependencies and 'Make' files
+already exists).
+It then sets up the requisite dependencies and 'Make' and 'configure' files
 so that the source code will successfully compile and link to the appropriate
-external libraries (OpenMP, zlib) required for ompBAM.
+external libraries (OpenMP, zlib) required for ompBAM. All 3 major platforms
+(Linux, MacOS and Windows) are supported, although MacOS users must first
+install the required OpenMP libraries first. See details below.
 }
 \details{
-OpenMP is not natively supported on MacOS. To compile ompBAM_based
+OpenMP is natively supported on Linux and Windows but
+not on MacOS. To compile ompBAM_based
 packages with OpenMP on MacOS, users should install the requisite OpenMP
-libraries. For details, refer to
+libraries. An easy way to do this would be to run: \verb{brew install libomp}.
+For details, refer to
 \href{https://mac.r-project.org/openmp/}{this guide}
 }
 \examples{
