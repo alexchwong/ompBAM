@@ -32,7 +32,9 @@ knitr::opts_chunk$set(
 )
 ```
 
-# (0) Installation
+# (0) Installation and Quick-Start
+
+### Installation
 
 To install ompBAM, start R (version "4.1") and enter: 
 
@@ -43,14 +45,75 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
 BiocManager::install("ompBAM")
 ```
 
-To create new packages using ompBAM, we recommend installing `devtools` and
+To create new packages using ompBAM, install `devtools` and
 `usethis` packages from CRAN:
 
 ```{r eval=FALSE}
 install.packages(c("devtools", "usethis"))
 ```
 
-# (1) Setting up a new R package to include ompBAM
+For MacOS users, make sure OpenMP libraries are installed correctly. We
+recommend users follow this [guide](https://mac.r-project.org/openmp/), but the
+quickest way to get started is to install `libomp` via brew:
+
+```{bash eval=FALSE}
+brew install libomp
+```
+
+### Making and compiling an example ompBAM-based package
+
+To create an example package, create a new R project using ompBAM by running
+the following in the R console:
+
+```{r eval=FALSE}
+library(ompBAM)
+project_path = "\path\to\MyPkgName"
+use_ompBAM(project_path)
+```
+
+After running the example code above (be sure to change the path of your
+desired project to the variable `project_path`), use RStudio to open the 
+`MyPkgName.Rproj` file located at the given path. Then, run the following:
+
+```{r eval=FALSE}
+devtools::document()
+```
+
+This will process the roxygen2 flags and write to the `NAMESPACE` file.
+
+After this, the new package can be built by running **Install and Restart**
+from the **Build** tab.
+
+To test the new package works as expected, run the following commands:
+
+```{r eval=FALSE}
+MyPkgName:::idxstats_pbam(ompBAM::example_BAM("Unsorted"), 2)
+MyPkgName:::idxstats_pbam(ompBAM::example_BAM("scRNAseq"), 2)
+```
+
+If you followed the above steps correctly, you will see the following output:
+
+```{r, include = FALSE}
+library(ompBAM)
+pkg_path = file.path(tempdir(), "MyPkgName")
+use_ompBAM(pkg_path)
+devtools::document(pkg_path)
+devtools::load_all(pkg_path)
+```
+
+```{r}
+MyPkgName:::idxstats_pbam(ompBAM::example_BAM("Unsorted"), 2)
+```
+
+```{r}
+MyPkgName:::idxstats_pbam(ompBAM::example_BAM("scRNAseq"), 2)
+```
+
+```{r, include = FALSE}
+unlink(pkg_path, recursive = TRUE)
+```
+
+# (1) Requirements to setting up a new R package to include ompBAM
 
 *ompBAM* provides a one-step function called `use_ompBAM()` that creates a new 
 package R project in a new directory (or adds requisite files to an existing 
@@ -224,27 +287,23 @@ each chromosome. See the
 [idxstats documentation](http://www.htslib.org/doc/samtools-idxstats.html)
 for more details
 
-Samtools requires the BAM file to be sorted and indexed before idxstats can be
-run. In this tutorial, we will inspect a simple C++ program that replicates
-idxstats but allows it to run on unsorted BAM files without an index.
+In this section, we will examine the `src/ompBAM_example.cpp` source code in
+detail and explain how to use ompBAM to re-create the *idxstats* function.
 
-First, lets see how this function works. Make sure you have run `use_ompBAM()`
-as described in the previous section and set your active project to the newly-
-created R-project of the package. Click on the "Install and Restart" from
-the "Build" tag from within RStudio, which will run R CMD INSTALL. This will
-compile the DLL based on the source code contained within the `src/` directory,
-according to the instructions included in the `make` files therein.
+First, lets see how this function works. Make sure you have created the example
+project using the steps as described in Section (0) - *Installation and 
+Quick-Start*. Make sure you can reproduce all the example output in that
+section.
 
-After this is done, run the newly created idxstats_pbam program from within
-the R console:
+Lets look at the line used to run the ompBAM-based idxstats function:
 
 ```{r eval=FALSE}
 myPkgName:::idxstats_pbam(ompBAM::example_BAM("Unsorted"), 2)
 ```
 
-If your package compiled and linked correctly, you will see some output that
-looks like the typical idxstats output. However, this function was run on an
-example RNA-seq BAM file of unsorted reads.
+Like the Samtools *idxstats*, this function counts the number of reads aligned
+to each chromosome in the genome. However, unlike idxstats, this function can be
+run on BAM files that are not sorted by chromosome and not indexed.
 
 Note that we use `:::` to call functions exported from the C++ source code by
 Rcpp. This is because, although Rcpp has exported the `idxstats_pbam` function,
@@ -252,8 +311,8 @@ this is currently only accessible to the R source code in your package. You will
 still need to create wrapper functions from within R, as covered later in 
 section (2c).
 
-In the following guide, we will go through the `src/ompBAM_example.cpp` step by
-step, explaining the code behind this simple function.
+In the following guide, we will go through the `src/ompBAM_example.cpp` in the
+example package, step by step, explaining the code behind this simple function.
 
 ## (2a) Headers and Includes
 
