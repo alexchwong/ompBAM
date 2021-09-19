@@ -71,12 +71,7 @@ use_ompBAM <- function(path = ".") {
     usethis::use_directory("src")
     usethis::use_git_ignore(c("*.o", "*.so", "*.dll"), "src")
 
-    write(paste0("#' @useDynLib ", proj_name, ", .registration = TRUE"),
-        R_import_file, sep="\n")
-    write("#' @import Rcpp", R_import_file, append = TRUE, sep="\n")
-    write("#' @import zlibbioc", R_import_file, append = TRUE, sep="\n")
-    write("NULL", R_import_file, append = TRUE, sep="\n")
-    usethis::ui_done(paste("Created", R_import_file, "with roxygen tags"))
+    .omp_write_to_package_R_script(R_import_file, proj_name)
 
     file.copy(system.file(file.path('examples', 'ompBAMExample', "src", 
         "Makevars.in"), package = 'ompBAM'), makevars)
@@ -93,11 +88,11 @@ use_ompBAM <- function(path = ".") {
     usethis::ui_done(
         "Created src/ompBAM_example.cpp with idxstats_pbam() function")
     
-    omp_use_dependency("Rcpp", "Imports", proj_path)
-    omp_use_dependency("zlibbioc", "Imports", proj_path)
-    omp_use_dependency("ompBAM", "LinkingTo", proj_path)
-    omp_use_dependency("Rcpp", "LinkingTo", proj_path)
-    omp_use_dependency("zlibbioc", "LinkingTo", proj_path)
+    .omp_use_dependency("Rcpp", "Imports", proj_path)
+    .omp_use_dependency("zlibbioc", "Imports", proj_path)
+    .omp_use_dependency("ompBAM", "LinkingTo", proj_path)
+    .omp_use_dependency("Rcpp", "LinkingTo", proj_path)
+    .omp_use_dependency("zlibbioc", "LinkingTo", proj_path)
     
     end_msg = paste(proj_name, "successfully created in", proj_path)
     usethis::ui_done(end_msg)
@@ -205,8 +200,25 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
     return(proj_path)
 }
 
+.omp_write_to_package_R_script <- function(R_import_file, proj_name) {
+    write(paste0("#' @useDynLib ", proj_name, ", .registration = TRUE"),
+        R_import_file, sep="\n")
+    write("#' @import Rcpp", R_import_file, append = TRUE, sep="\n")
+    write("#' @import zlibbioc", R_import_file, append = TRUE, sep="\n")
+    write("NULL", R_import_file, append = TRUE, sep="\n")
+    write("", R_import_file, append = TRUE, sep="\n")
+    write("#' @export", R_import_file, append = TRUE, sep="\n")
+    write("idxstats <- function(bam_file, n_threads) {", 
+        R_import_file, append = TRUE, sep="\n")
+    write("    idxstats_pbam(bam_file, n_threads)", 
+        R_import_file, append = TRUE, sep="\n")
+    write("}", R_import_file, append = TRUE, sep="\n")
+
+    usethis::ui_done(paste("Created", R_import_file, "with roxygen tags"))
+}
+
 # modeled after usethis::use_dependency
-omp_use_dependency <- function(package, type, proj_path) {
+.omp_use_dependency <- function(package, type, proj_path) {
     types <- c("Depends", "Imports", "Suggests", "Enhances", "LinkingTo")
     names(types) <- tolower(types)
     type <- types[[match.arg(tolower(type), names(types))]]

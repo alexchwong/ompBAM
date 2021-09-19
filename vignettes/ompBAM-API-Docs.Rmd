@@ -10,14 +10,15 @@ output:
 abstract:
     Although various tools for multi-threaded BAM processing (samtools,
     sambamba) are available, currently there are none available to the 
-    R/Bioconductor environment. Parallelism in R is achieved using BiocParallel
-    or related packages. Typical alternatives include processing multiple BAM 
-    files, each using a single core. Although easy to set up, memory-intensive
-    applications limit such approaches. *ompBAM* is a header-only C++ library 
-    based on OpenMP, allowing developers to implement OpenMP-based parallelism 
-    for the sequential reading of BAM files. *ompBAM* makes it easy by handling 
-    all the parallel file-access and bgzf decompression, allowing developers to 
-    focus on multi-threaded handling of individual alignments / reads.
+    R/Bioconductor environment. Parallel processing in R is achieved using 
+    BiocParallel or related packages. Typical alternatives include processing
+    multiple BAM files, each using a single core. Although easy to set up, 
+    memory-intensive applications limit such approaches. *ompBAM* is a 
+    header-only C++ library based on OpenMP, allowing developers to implement
+    OpenMP-based parallel processing for the sequential reading of BAM files. 
+    *ompBAM* makes it easy by handling all the parallel file-access and bgzf
+    decompression, allowing developers to focus on multi-threaded handling of 
+    individual alignments / reads.
     *ompBAM* package version `r packageVersion("ompBAM")`
 vignette: >
     %\VignetteIndexEntry{ompBAM API Documentation}
@@ -67,7 +68,7 @@ the following in the R console:
 
 ```{r eval=FALSE}
 library(ompBAM)
-project_path = "\path\to\MyPkgName"
+project_path = "\path\to\MyPkg"
 use_ompBAM(project_path)
 ```
 
@@ -87,31 +88,30 @@ from the **Build** tab.
 To test the new package works as expected, run the following commands:
 
 ```{r eval=FALSE}
-MyPkgName:::idxstats_pbam(ompBAM::example_BAM("Unsorted"), 2)
-MyPkgName:::idxstats_pbam(ompBAM::example_BAM("scRNAseq"), 2)
+library(MyPkg)
+idxstats(ompBAM::example_BAM("Unsorted"), 2)
+idxstats(ompBAM::example_BAM("scRNAseq"), 2)
 ```
 
 If you followed the above steps correctly, you will see the following output:
 
 ```{r, include = FALSE}
 library(ompBAM)
-pkg_path = file.path(tempdir(), "MyPkgName")
+pkg_path = file.path(tempdir(), "MyPkg")
 use_ompBAM(pkg_path)
 devtools::document(pkg_path)
 devtools::load_all(pkg_path)
+library(MyPkg)
 ```
 
 ```{r}
-MyPkgName:::idxstats_pbam(ompBAM::example_BAM("Unsorted"), 2)
+idxstats(ompBAM::example_BAM("Unsorted"), 2)
 ```
 
 ```{r}
-MyPkgName:::idxstats_pbam(ompBAM::example_BAM("scRNAseq"), 2)
+idxstats(ompBAM::example_BAM("scRNAseq"), 2)
 ```
 
-```{r, include = FALSE}
-unlink(pkg_path, recursive = TRUE)
-```
 
 # (1) Requirements to setting up a new R package to include ompBAM
 
@@ -128,8 +128,8 @@ R-generated temporary directory as an example:
 
 ```{r}
 library(ompBAM)
-path = file.path(tempdir(), "myPkgName")
-use_ompBAM(path)
+pkg_path = file.path(tempdir(), "myPkgName")
+use_ompBAM(pkg_path)
 ```
 
 We recommend the user run this function in a project directory of their choice
@@ -151,7 +151,7 @@ from within RStudio.
 
 Note that the newly-created package is designed to run with roxygen2. We
 recommend users build their package documentation and NAMESPACE using roxygen2.
-To do this, simply run devtools::document() to process roxygen2 tags.
+To do this, simply run `devtools::document()` to process roxygen2 tags.
 
 ## (1b) Dependencies required to compile with ompBAM
 
@@ -858,9 +858,9 @@ Note that copy constructor and copy assignment operators are disabled for
 compile-time:
 
 ```{Rcpp eval=FALSE}
-pbam_in bam1;			// Default constructor (will compile)	
-pbam_in bam2 = bam1;	// copy assignment operation (will FAIL)
-pbam_in bam3(bam1);		// copy constructor (will FAIL)
+pbam_in bam1;           // Default constructor (will compile)
+pbam_in bam2 = bam1;    // copy assignment operation (will FAIL)
+pbam_in bam3(bam1);     // copy constructor (will FAIL)
 ```
 
 #### Examples
@@ -1238,7 +1238,7 @@ int main() {
       pbam1_t read(inbam.supplyRead(i));
       // Keep looping while reads are valid
       while(read.validate()) {
-	    read = inbam.supplyRead(i);     
+        read = inbam.supplyRead(i);     
       }
     }
   }
@@ -1829,7 +1829,7 @@ for(unsigned int j = 0; j < tags.size(); j++) {
       Rcpp::Rcout << '\t'; break;
   }
 }
-Rcpp::Rcout << '\n';	// Line break
+Rcpp::Rcout << '\n';    // Line break
 ```
 
 # (5) SessionInfo
