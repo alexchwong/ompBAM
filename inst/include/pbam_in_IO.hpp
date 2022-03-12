@@ -1,3 +1,25 @@
+/* pbam_in_IO.hpp pbam_in I/O
+
+Copyright (C) 2021 Alex Chit Hei Wong
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.  */
+
 #ifndef _pbam_in_IO
 #define _pbam_in_IO
 
@@ -28,11 +50,11 @@ inline int pbam_in::closeFile() {
 
 inline int pbam_in::obtainChrs(std::vector<std::string> & s_chr_names, std::vector<uint32_t> & u32_chr_lens) {
   if(!magic_header) {
-    Rcpp::Rcout << "Header is not yet read\n";
+    cout << "Header is not yet read\n";
     return(-1);
   }
   if(n_ref == 0) {
-    Rcpp::Rcout << 
+    cout << 
       "No chromosome names stored. Is pbam_in::readHeader() been run yet?\n";
     return(-1);
   }
@@ -59,7 +81,7 @@ inline int pbam_in::check_file() {
     char eof_check[bamEOFlength + 1];
     IN->read(eof_check, bamEOFlength);
     if(strncmp(bamEOF, eof_check, bamEOFlength) != 0) {
-      Rcpp::Rcout << "Error opening BAM - EOF bit corrupt. Perhaps this file is truncated?\n";
+      cout << "Error opening BAM - EOF bit corrupt. Perhaps this file is truncated?\n";
       IN = NULL;
       return(-1);
     }
@@ -80,14 +102,14 @@ inline int pbam_in::check_file() {
 
 inline int pbam_in::readHeader() {
   if(magic_header) {
-    Rcpp::Rcout << "Header is already read\n";
+    cout << "Header is already read\n";
     return(-1);
   }
   
   magic_header = (char*)malloc(8+1);
   read(magic_header, 8);
   if(strncmp(magic_header, magicstring, 4) != 0) {
-    Rcpp::Rcout << "Invalid BAM magic string\n";
+    cout << "Invalid BAM magic string\n";
     free(magic_header); magic_header = NULL;
     return(-1);
   }

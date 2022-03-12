@@ -1,3 +1,25 @@
+/* pbam_in_decompress.hpp pbam_in decompress function
+
+Copyright (C) 2021 Alex Chit Hei Wong
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.  */
+
 #ifndef _pbam_in_decompress
 #define _pbam_in_decompress
 
@@ -123,7 +145,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
   }
 
   if(check_gzip_head) {
-    Rcpp::Rcout << "BGZF blocks corrupt\n";
+    cout << "BGZF blocks corrupt\n";
     return(0);
   }
 
@@ -168,7 +190,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
   // Now, src_cursor == src_max and dest_cursor == dest_max
   // Be pedantic and check this
   if(src_cursor != src_max || dest_cursor != dest_max) {
-    Rcpp::Rcout << "Error occurred during BGZF block counting\n"
+    cout << "Error occurred during BGZF block counting\n"
       << "This should not have occurred. Please report to mod author\n";
     return(0);
   }
@@ -228,7 +250,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
 
           int ret = inflateInit2(zs, -15);
           if(ret != Z_OK) {
-            Rcpp::Rcout << "Exception during BAM decompression - inflateInit2() fail: (" << ret << ") \n";
+            cout << "Exception during BAM decompression - inflateInit2() fail: (" << ret << ") \n";
             #ifdef _OPENMP
             #pragma omp critical
             #endif
@@ -237,7 +259,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
           if(!error_occurred) {
             ret = inflate(zs, Z_FINISH);
             if(ret != Z_OK && ret != Z_STREAM_END) {
-              Rcpp::Rcout << "Exception during BAM decompression - inflate() fail: (" << ret << ") \n";
+              cout << "Exception during BAM decompression - inflate() fail: (" << ret << ") \n";
               #ifdef _OPENMP
               #pragma omp critical
               #endif
@@ -248,7 +270,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
             ret = inflateEnd(zs);
             crc = crc32(crc32(0L, NULL, 0L), (Bytef*)(data_buf + thread_dest_cursor), *dest_size);
             if(*crc_check != crc) {
-              Rcpp::Rcout << "CRC fail during BAM decompression\n";
+              cout << "CRC fail during BAM decompression\n";
               #ifdef _OPENMP
               #pragma omp critical
               #endif
@@ -265,7 +287,7 @@ inline size_t pbam_in::decompress(const size_t n_bytes_to_decompress) {
   }
   
   if(error_occurred) {
-    Rcpp::Rcout << "Decompression failed at " << GetProgress() << " bytes\n";
+    cout << "Decompression failed at " << GetProgress() << " bytes\n";
     return(0);
   }
   file_buf_cursor = src_bgzf_cap.at(src_bgzf_cap.size() - 1);
@@ -285,7 +307,7 @@ inline int pbam_in::read_file_to_buffer(char * buf, const size_t len) {
     size_t cur_len = 0;
     size_t chunk_div = (len+1) / threads_to_use;
     for(unsigned int i = 0; i < threads_to_use; i++) {
-      // Rcpp::Rcout << "thread " << i << ", file pos " << cur_len << '\n';
+      // cout << "thread " << i << ", file pos " << cur_len << '\n';
       len_starts.push_back( cur_len );
       len_chunks.push_back( std::min( len - cur_len, chunk_div) );
       cur_len += len_chunks.at(i);
@@ -341,7 +363,7 @@ inline void pbam_in::move_residual_data(
 
 inline int pbam_in::clean_data_buffer(const size_t n_bytes_to_decompress) {
   // Remove residual bytes to beginning of buffer:
-  // Rcpp::Rcout << "clean_data_buffer\n";
+  // cout << "clean_data_buffer\n";
   char * data_tmp;
   char * temp_buffer;
   size_t residual = data_buf_cap-data_buf_cursor;
@@ -438,7 +460,7 @@ inline size_t pbam_in::load_from_file(const size_t n_bytes) {
   size_t n_bytes_to_load =  std::min( std::max(n_bytes, residual) , FILE_BUFFER_CAP);  // Cap at file buffer
   size_t n_bytes_to_read = std::min(n_bytes_to_load - residual, IS_LENGTH - tellg());
   if(n_bytes_to_read == 0) return(0);
-  // Rcpp::Rcout << "\nload_from file: n_bytes_to_read = " << n_bytes_to_read << '\n';
+  // cout << "\nload_from file: n_bytes_to_read = " << n_bytes_to_read << '\n';
   // Remove residual bytes to beginning of buffer:
   if(residual > 0) {
     // have to move bytes around
