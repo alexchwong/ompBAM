@@ -339,10 +339,16 @@ contains the following:
 
 #include "Rcpp.h"
 using namespace Rcpp;
+#define cout Rcpp::Rcout
 ```
 
 The line `#include "Rcpp.h"` is probably redundant as `<ompBAM.hpp>` already 
 includes `Rcpp.h`, but we include it here for completeness.
+
+The `cout` C++ function is not supported in R, and is replaced by `Rcout` in 
+Rcpp. For compatibility with non-R environments, all output messages in ompBAM
+uses `cout`. The line `#define cout Rcpp::Rcout` ensures that `cout` is
+interpreted by the compiler as `Rcpp::Rcout`.
 
 ## (2b) Sanity check for number of threads
 
