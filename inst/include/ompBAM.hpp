@@ -33,6 +33,7 @@ SOFTWARE.  */
 #include <cstring>    // To compare between strings
 #include <vector>     // For vector types
 #include <iostream>   // For cout
+#include <map>        // For std::map functions in pbam1_t
 
 #ifdef _OPENMP
   #include <omp.h>    // For OpenMP

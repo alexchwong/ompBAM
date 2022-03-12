@@ -56,18 +56,18 @@ NULL
 #' @md
 #' @export
 use_ompBAM <- function(path = ".") {
-    proj_path = .check_ompBAM_path(path)
-    proj_name = basename(proj_path)   
+    proj_path <- .check_ompBAM_path(path)
+    proj_name <- basename(proj_path)   
     
     usethis::create_package(proj_path, open = FALSE)
     usethis::proj_set(proj_path, force = TRUE)
     
-    makevars = file.path(proj_path, "src", "Makevars.in")
-    makevars_win = file.path(proj_path, "src", "Makevars.win")
-    configure = file.path(proj_path, "configure")
-    configure.win = file.path(proj_path, "configure.win")
-    example_code = file.path(proj_path, "src/ompBAM_example.cpp")
-    R_import_file = file.path(proj_path, "R/ompBAM_imports.R")
+    makevars <- file.path(proj_path, "src", "Makevars.in")
+    makevars_win <- file.path(proj_path, "src", "Makevars.win")
+    configure <- file.path(proj_path, "configure")
+    configure.win <- file.path(proj_path, "configure.win")
+    example_code <- file.path(proj_path, "src/ompBAM_example.cpp")
+    R_import_file <- file.path(proj_path, "R/ompBAM_imports.R")
     usethis::use_directory("src")
     usethis::use_git_ignore(c("*.o", "*.so", "*.dll"), "src")
 
@@ -94,9 +94,9 @@ use_ompBAM <- function(path = ".") {
     .omp_use_dependency("Rcpp", "LinkingTo", proj_path)
     .omp_use_dependency("zlibbioc", "LinkingTo", proj_path)
     
-    end_msg = paste(proj_name, "successfully created in", proj_path)
+    end_msg <- paste(proj_name, "successfully created in", proj_path)
     usethis::ui_done(end_msg)
-    end_msg2 = paste("Please run roxygen2 using devtools::document() before",
+    end_msg2 <-paste("Please run roxygen2 using devtools::document() before",
         "building the package.")
     message(end_msg2)
 }
@@ -116,6 +116,7 @@ use_ompBAM <- function(path = ".") {
 #' 
 #' print(system.file(file.path('examples', "ompBAMExample"), 
 #'     package = 'ompBAM'))
+#'
 #' # Install the ompBAMExample package
 #' 
 #' install_ompBAM_example()
@@ -123,7 +124,7 @@ use_ompBAM <- function(path = ".") {
 install_ompBAM_example <- function() {
     CheckPackageInstalled("devtools")
     
-    pkg = "ompBAMExample"
+    pkg <- "ompBAMExample"
     from <- system.file(file.path('examples', pkg), package = 'ompBAM')
     if(!dir.exists(from)) {
         stop("Invalid example package name")
@@ -150,7 +151,7 @@ install_ompBAM_example <- function() {
 #' example_BAM("Unsorted")
 #' @export
 example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
-    dataset = match.arg(dataset)
+    dataset <- match.arg(dataset)
     if(dataset == "Unsorted") return(
         system.file(file.path('extdata', 'THP1_ND_1.bam'), package = 'ompBAM'))
     if(dataset == "scRNAseq") return(
@@ -159,39 +160,39 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
 }
 
 # Sanity checks on provided path for smooth package creation.
-.check_ompBAM_path = function(path) {
+.check_ompBAM_path <- function(path) {
     CheckPackageInstalled("usethis")
     CheckPackageInstalled("desc")
     
     if(!dir.exists(dirname(path))) {
-        errormsg = paste(dirname(path), "needs to exist")
+        errormsg <- paste(dirname(path), "needs to exist")
         stop(errormsg, call. = FALSE)
     }
     if(dir.exists(path)) {
-        proj_path = normalizePath(path)
+        proj_path <- normalizePath(path)
     } else {
-        proj_path = file.path(normalizePath(dirname(path)), basename(path))
+        proj_path <- file.path(normalizePath(dirname(path)), basename(path))
     }
-    makevars = file.path(proj_path, "src", "Makevars")
-    makevars_win = file.path(proj_path, "src", "Makevars.win")
+    makevars <- file.path(proj_path, "src", "Makevars")
+    makevars_win <- file.path(proj_path, "src", "Makevars.win")
     if(file.exists(makevars) | file.exists(makevars_win)) {
-        fail_make_msg = paste(
+        fail_make_msg <- paste(
             "src/Makevars or src/Makevars.win already exist.",
             "use_ompBAM not run()"
         )
         stop(fail_make_msg, call. = FALSE)
     }
-    example_code = file.path(proj_path, "src/ompBAM_example.cpp")
+    example_code <- file.path(proj_path, "src/ompBAM_example.cpp")
     if(file.exists(example_code)) {
-        fail_src_msg = paste(
+        fail_src_msg <- paste(
             example_code, "already exist.",
             "use_ompBAM not run()"
         )
         stop(fail_src_msg, call. = FALSE)
     }
-    R_import_file = file.path(proj_path, "R/ompBAM_imports.R")
+    R_import_file <- file.path(proj_path, "R/ompBAM_imports.R")
     if(file.exists(R_import_file)) {
-        fail_src_msg = paste(
+        fail_src_msg <- paste(
             R_import_file, "already exist.",
             "Has use_ompBAM() already been run?"
         )
@@ -231,7 +232,7 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
         (existing_type == "LinkingTo" & type != "LinkingTo")
     
     if (!any(existing_dep) || any(is_linking_to)) {
-        done_msg = paste("Adding", package, "to", type, "field in DESCRIPTION")
+        done_msg <- paste("Adding", package, "to", type, "field in DESCRIPTION")
         usethis::ui_done(done_msg)
         desc::desc_set_dep(package, type, file = proj_path)
         return(invisible(TRUE))
@@ -241,7 +242,7 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
     delta <- sign(match(existing_type, types) - match(type, types))
     if (delta <= 0) {
         # don't downgrade
-        warn_msg = paste(
+        warn_msg <- paste(
             "Package", package, "is already listed in",
             existing_type, "in DESCRIPTION, no change made."
         )
@@ -250,7 +251,7 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
     } else if (delta > 0) {
     # upgrade
         if (existing_type != "LinkingTo") {
-            done_msg = paste("Moving", package, "from", existing_type,
+            done_msg <- paste("Moving", package, "from", existing_type,
                 "to", type, "field in DESCRIPTION")
             usethis::ui_done(done_msg)
             desc::desc_del_dep(package, existing_type, file = proj_path)
@@ -261,15 +262,16 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
 }
 
 CheckPackageInstalled <- function(
-        package = "DESeq2", version = "1.0.0", 
+        package = "DESeq2", 
+        version = "1.0.0", 
         returntype = c("error", "warning", "silent")
 ) {
-    res = tryCatch(
+    res <- tryCatch(
         ifelse(utils::packageVersion(package)>=version, TRUE, FALSE),
         error = function(e) FALSE)
     if(!res) {
-        returntype = match.arg(returntype)
-        stopmsg = paste(package, "version", version, "is not installed;",
+        returntype <- match.arg(returntype)
+        stopmsg <- paste(package, "version", version, "is not installed;",
             "and is required for this function")
         if(returntype == "error") {
             stop(stopmsg, call. = FALSE)
