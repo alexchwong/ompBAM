@@ -6,6 +6,7 @@
 
 #include "Rcpp.h"
 using namespace Rcpp;
+#define cout Rcpp::Rcout
 
 unsigned int use_threads(int n_threads = 1) {
   #ifdef _OPENMP

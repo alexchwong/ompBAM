@@ -23,26 +23,33 @@ EOF
 	if [ "$R_OPENMP" = "fail" ]; then
 	  # Compilation failed -- try forcing -fopenmp instead.
 	  R_OPENMP="work"
-	  "${CC}" "${CFLAGS}" -Xclang -fopenmp test-omp.c || R_OPENMP="fail"
+	  "${R_HOME}/bin/R" CMD SHLIB -Xclang -fopenmp test-omp.c >/dev/null 2>&1 || R_OPENMP="fail"
 	fi
 
 	# Clean up.
 	rm -f test-omp.* a.out
+
+	# make the Makevars temp file
+	if [ ! -e "./src/Makevars.tmp" ]; then
+		touch ./src/Makevars.tmp
+	fi
 	
 	if [ "$R_OPENMP" = "work" ]; then
 		echo "Configuring OpenMP compiler / linker flags for MacOS"
-		#make the Makevars temp file
-		if [ ! -e "./src/Makevars.tmp" ]; then
-			touch ./src/Makevars.tmp
-		fi
 		
 		echo "OMPBAM_PKG_CXXFLAGS = -Xclang -fopenmp" > ./src/Makevars.tmp
 		echo "OMPBAM_PKG_LIBS = -lomp" >> ./src/Makevars.tmp
-		echo "" >> ./src/Makevars.tmp
+		echo "" >> ./src/Makevars.tmp		
+	else
+		echo "Configuring without OpenMP for MacOS"
 		
-		cat ./src/Makevars.tmp ./src/Makevars.in > ./src/Makevars
-		rm ./src/Makevars.tmp
+		echo "OMPBAM_PKG_CXXFLAGS=" > ./src/Makevars.tmp
+		echo "OMPBAM_PKG_LIBS=" >> ./src/Makevars.tmp
+		echo "" >> ./src/Makevars.tmp		
 	fi
+
+	cat ./src/Makevars.tmp ./src/Makevars.in > ./src/Makevars
+	rm ./src/Makevars.tmp
 
 elif [ "$(expr substr $(uname -s) 1 5)" = "Linux" ] ;then
 	#if linux, make the Makevars temp file
