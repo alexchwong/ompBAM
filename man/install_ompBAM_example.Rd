@@ -23,6 +23,7 @@ users can run the example functions contained therein.
 
 print(system.file(file.path('examples', "ompBAMExample"), 
     package = 'ompBAM'))
+
 # Install the ompBAMExample package
 
 install_ompBAM_example()
