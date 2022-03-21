@@ -1804,7 +1804,7 @@ for more details.
 
 * `tagVal_{A/c/C/s/S/i/I/f}()` returns the 1-length value of the given tag type
 stored in the given `tag`.
-* tagVal_Z() takes by reference a string `dest` in which to store the string
+* `tagVal_Z()` takes by reference a string `dest` in which to store the string
 contained in Z-type tags. It returns the length of the tag if success, or `-1`
 if fail.
 * `tagval_B()` takes by reference a vector `dest` of the appropriate type, in
