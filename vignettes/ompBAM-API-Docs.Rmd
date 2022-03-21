@@ -37,7 +37,7 @@ knitr::opts_chunk$set(
 
 ### Installation
 
-To install ompBAM, start R (version "4.1") and enter: 
+To install ompBAM, start R (version "4.2") and enter: 
 
 ```{r eval=FALSE}
 if (!requireNamespace("BiocManager", quietly = TRUE))
@@ -73,7 +73,7 @@ use_ompBAM(project_path)
 ```
 
 After running the example code above (be sure to change the path of your
-desired project to the variable `project_path`), use RStudio to open the 
+desired project in the variable `project_path`), use RStudio to open the 
 `MyPkgName.Rproj` file located at the given path. Then, run the following:
 
 ```{r eval=FALSE}
@@ -162,11 +162,6 @@ zlibbioc. Check that the following has been added to the DESCRIPTION file:
 Imports: Rcpp, zlibbioc
 LinkingTo: Rcpp, zlibbioc, ompBAM
 ```
-
-Also, the NAMESPACE file needs to be changed to import Rcpp and zlibbioc. This
-is required to link the compiled dll of the package. `use_ompBAM()` will have 
-already created roxygen2 tags inside the `ompBAM_imports.R` file within the `R/`
-directory.
 
 Also, `use_ompBAM()` creates a "wrapper" function for the C++ function
 `idxstats_pbam()` function. This is a simple R function `idxstats()` which in
@@ -302,7 +297,7 @@ each chromosome. See the
 for more details
 
 In this section, we will examine the `src/ompBAM_example.cpp` source code in
-detail and explain how to use ompBAM to re-create the *idxstats* function.
+detail and explain how we used ompBAM to re-create the *idxstats* function.
 
 First, lets see how this function works. Make sure you have created the example
 project using the steps as described in Section (0) - *Installation and 
@@ -318,12 +313,6 @@ idxstats(ompBAM::example_BAM("Unsorted"), 2)
 Like the Samtools *idxstats*, this function counts the number of reads aligned
 to each chromosome in the genome. However, unlike idxstats, this function can be
 run on BAM files that are not sorted by chromosome and not indexed.
-
-Note that we use `:::` to call functions exported from the C++ source code by
-Rcpp. This is because, although Rcpp has exported the `idxstats_pbam` function,
-this is currently only accessible to the R source code in your package. You will
-still need to create wrapper functions from within R, as covered later in 
-section (2c).
 
 In the following guide, we will go through the `src/ompBAM_example.cpp` in the
 example package, step by step, explaining the code behind this simple function.
@@ -540,7 +529,7 @@ run the `FOR` loop sequentially.
 
 Within this loop, we are free to declare any thread-specific variables.
 Variables declared within the parallel FOR loop are thread-specific, meaning
-their contents can not be accessed by other threads processing other iterations.
+their contents cannot be accessed by other threads processing other iterations.
 So within the `FOR` loop, we declare a `read_counter` vector which will count
 reads processed by each thread.
 
@@ -563,7 +552,7 @@ constructor at declaration.
 Note that the above code is equivalent to:
 
 ```{Rcpp eval=FALSE}
-pbam1_t read
+pbam1_t read;
 read = inbam.supplyRead(i);
 ```
 
@@ -618,7 +607,7 @@ std::vector<pbam1_t> read_storage;
 pbam1_t real_read = read;
 real_read.realize();
 
-read_storage.push_back(real_read.realize);
+read_storage.push_back(real_read);
 ```
 
 In the above code, we call `pbam1_t::realize()`. This function creates a read-
@@ -659,6 +648,9 @@ the reads within the OpenMP parallel FOR loop. The entire processing loop is
 included below and we will discuss the remaining lines in detail:
 
 ```{Rcpp eval=FALSE}
+// Creates a data structure that stores per-chromosome read counts
+std::vector<uint32_t> total_reads(chrom_count);
+
 while(0 == inbam.fillReads()) {
   // OpenMP parallel FOR loop, each thread runs 1 loop simultaneously.
   #ifdef _OPENMP
@@ -763,7 +755,7 @@ idxstats function:
 BAM files are very large files (or we wouldn't use multi-threading to read 
 them). Sometimes a progress bar is very useful in this regard.
 
-pbam_in has two functions that provide useful data that can be parsed to the 
+`pbam_in` has two functions that provide useful data that can be parsed to the 
 RcppProgress progress bar.
 
 * `pbam_in::GetFileSize()` will return the file size (in bytes) of the opened 
@@ -790,7 +782,7 @@ Alternatively, refer to Section (3i) for an example RcppProgress bar
 The `pbam_in` object is responsible for opening BAM files for sequential
 multi-threaded BAM processing.
 
-Internally, pbam_in checks BAM files for truncation, data corruption and other
+Internally, `pbam_in` checks BAM files for truncation, data corruption and other
 issues. Then it reads and decompresses BAM files using multiple threads.
 Applications using *ompBAM* simply have to retrieve reads from the `pbam_in`
 object using the `supplyRead()` function, after "priming the pump" to fill
@@ -809,7 +801,7 @@ may be supported in later versions of *ompBAM*.
 
 ## (3a) Constructor
 
-Creates a pbam_in object.
+Creates a `pbam_in` object.
 
 #### Usage
 
@@ -935,7 +927,7 @@ inbam.openFile(bam_file, 4);    // Accesses the BAM file using 4 threads
 
 ## (3c) SetInputHandle()
 
-Assigns an ifstream handle to pbam_in. Also defines how many threads to use to
+Assigns an `istream` handle to `pbam_in`. Also defines how many threads to use to
 read the BAM file. This is used as an alternative to `pbam_in::openFile()`.
 
 #### Usage
