@@ -56,6 +56,12 @@ NULL
 #' @md
 #' @export
 use_ompBAM <- function(path = ".") {
+    # The following packages are only required for developers using ompBAM API
+    # and are added as 'suggests' to avoid having as requirements on the
+    # created packages
+    .check_package_is_installed("usethis")
+    .check_package_is_installed("desc")
+    
     proj_path <- .check_ompBAM_path(path)
     proj_name <- basename(proj_path)   
     
@@ -122,7 +128,10 @@ use_ompBAM <- function(path = ".") {
 #' install_ompBAM_example()
 #' @export
 install_ompBAM_example <- function() {
-    CheckPackageInstalled("devtools")
+    # The following packages are only required for developers using ompBAM API
+    # and are added as 'suggests' to avoid having as requirements on the
+    # created packages
+    .check_package_is_installed("devtools")
     
     pkg <- "ompBAMExample"
     from <- system.file(file.path('examples', pkg), package = 'ompBAM')
@@ -160,10 +169,7 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
 }
 
 # Sanity checks on provided path for smooth package creation.
-.check_ompBAM_path <- function(path) {
-    CheckPackageInstalled("usethis")
-    CheckPackageInstalled("desc")
-    
+.check_ompBAM_path <- function(path) {   
     if(!dir.exists(dirname(path))) {
         errormsg <- paste(dirname(path), "needs to exist")
         stop(errormsg, call. = FALSE)
@@ -261,7 +267,7 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
     invisible(TRUE)
 }
 
-CheckPackageInstalled <- function(
+.check_package_is_installed <- function(
         package = "DESeq2", 
         version = "1.0.0", 
         returntype = c("error", "warning", "silent")

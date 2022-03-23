@@ -8,17 +8,14 @@ output:
         toc: true
         toc_float: true
 abstract:
-    Although various tools for multi-threaded BAM processing (samtools,
-    sambamba) are available, currently there are none available to the 
-    R/Bioconductor environment. Parallel processing in R is achieved using 
-    BiocParallel or related packages. Typical alternatives include processing
-    multiple BAM files, each using a single core. Although easy to set up, 
-    memory-intensive applications limit such approaches. *ompBAM* is a 
-    header-only C++ library based on OpenMP, allowing developers to implement
-    OpenMP-based parallel processing for the sequential reading of BAM files. 
-    *ompBAM* makes it easy by handling all the parallel file-access and bgzf
-    decompression, allowing developers to focus on multi-threaded handling of 
-    individual alignments / reads.
+    ompBAM provides C++ header files for developers wishing to
+    create R packages that processes BAM files. ompBAM automates file access,
+    memory management, and handling of multiple threads 'behind the scenes', so
+    developers can focus on creating domain-specific functionality.
+    This documentation introduces ompBAM, including a quick-start to create
+    an ompBAM-based R package, step-by-step explanation of the ompBAM example
+    package, and detailed documentation of each function of the two ompBAM
+    objects, 'pbam_in' and 'pbam1_t'.
     *ompBAM* package version `r packageVersion("ompBAM")`
 vignette: >
     %\VignetteIndexEntry{ompBAM API Documentation}
@@ -927,8 +924,8 @@ inbam.openFile(bam_file, 4);    // Accesses the BAM file using 4 threads
 
 ## (3c) SetInputHandle()
 
-Assigns an `istream` handle to `pbam_in`. Also defines how many threads to use to
-read the BAM file. This is used as an alternative to `pbam_in::openFile()`.
+Assigns an `istream` handle to `pbam_in`. Also defines how many threads to use
+to read the BAM file. This is used as an alternative to `pbam_in::openFile()`.
 
 #### Usage
 
@@ -1405,7 +1402,7 @@ scores, and size of additional tag data) totals the given block_size.
 It is most often used to check whether `pbam_in::supplyRead()` has supplied an
 empty read signifying end of the thread-specific buffer. It can also check for
 invalid data pointers if users call `pbam_in::fillReads()` before "realizing"
-the reads to make the `pbam2_t` data persist. As explained previously in
+the reads to make the `pbam1_t` data persist. As explained previously in
 Section (2g:i), `pbam_in::fillReads()` will invalidate virtual reads as their
 data would have been recycled; however, realized reads will be persistent and
 continue to validate.

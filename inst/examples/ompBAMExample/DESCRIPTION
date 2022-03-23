@@ -4,8 +4,8 @@ Title: Example use of the ompBAM package.
 Description: The example source code in src/main.cpp produces several simple 
 	functions to highlight how the ompBAM C++ library is used to profile BAMs
 	sequentially in multi-threaded applications.
-Version: 0.98.0
-Date: 2021-09-09
+Version: 0.99.0
+Date: 2022-03-23
 Authors@R: c(person("Alex Chit Hei", "Wong", email="a.wong@centenary.org.au", 
 		role=c("aut", "cre", "cph")))   
 Maintainer: Alex Wong <a.wong@centenary.org.au>
