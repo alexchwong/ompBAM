@@ -71,7 +71,7 @@ use_ompBAM(project_path)
 
 After running the example code above (be sure to change the path of your
 desired project in the variable `project_path`), use RStudio to open the 
-`MyPkgName.Rproj` file located at the given path. Then, run the following:
+`MyPkg.Rproj` file located at the given path. Then, run the following:
 
 ```{r eval=FALSE}
 devtools::document()
