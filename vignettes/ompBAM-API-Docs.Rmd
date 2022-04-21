@@ -95,7 +95,7 @@ idxstats(ompBAM::example_BAM("Unsorted"), 2)
 ```{r}
 idxstats(ompBAM::example_BAM("scRNAseq"), 2)
 ```
-#### Creating an ompBAM-based package from within RStudio:
+#### To create an ompBAM-based package from within RStudio:
 
 To create an example package, create a new R project using ompBAM by running
 the following in the R console:
