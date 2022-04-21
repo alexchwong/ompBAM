@@ -1,8 +1,8 @@
 Package: ompBAM
 Title: C++ Library for OpenMP-based multi-threaded sequential profiling of
 	Binary Alignment Map (BAM) files
-Version: 0.99.0
-Date: 2022-03-23
+Version: 0.99.1
+Date: 2022-4-21
 Authors@R: c(person("Alex Chit Hei", "Wong", email="a.wong@centenary.org.au", 
 		role=c("aut", "cre", "cph")))    
 Description: This packages provides C++ header files for developers wishing to

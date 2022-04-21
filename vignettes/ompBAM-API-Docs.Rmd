@@ -58,7 +58,44 @@ quickest way to get started is to install `libomp` via brew:
 brew install libomp
 ```
 
-### Making and compiling an example ompBAM-based package
+### Creating and testing an example ompBAM-based package
+
+To create a new package (in temporary directory):
+
+```{r}
+library(ompBAM)
+pkg_path = file.path(tempdir(), "MyPkg")
+use_ompBAM(pkg_path)
+```
+
+Before this package is functional, it needs to be roxygenised. This will
+automate the export of the example function `idxstats()`. Run the following:
+
+```{r}
+devtools::document(pkg_path)
+```
+
+To simulate the compilation and loading of this package (this is almost
+equivalent to running `R CMD BUILD` then loading the `MyPkg` package:
+
+```{r}
+devtools::load_all(pkg_path)
+```
+
+To test the new package works as expected, run the following commands:
+
+```{r}
+library(MyPkg)
+```
+
+```{r}
+idxstats(ompBAM::example_BAM("Unsorted"), 2)
+```
+
+```{r}
+idxstats(ompBAM::example_BAM("scRNAseq"), 2)
+```
+#### Creating an ompBAM-based package from within RStudio:
 
 To create an example package, create a new R project using ompBAM by running
 the following in the R console:
@@ -69,8 +106,10 @@ project_path = "\path\to\MyPkg"
 use_ompBAM(project_path)
 ```
 
-After running the example code above (be sure to change the path of your
-desired project in the variable `project_path`), use RStudio to open the 
+NB: be sure to replace `project_path` to the actual directory path in which 
+you wish to store your project.
+
+After running the example code above, use RStudio to open the newly created
 `MyPkg.Rproj` file located at the given path. Then, run the following:
 
 ```{r eval=FALSE}
@@ -81,34 +120,6 @@ This will process the roxygen2 flags and write to the `NAMESPACE` file.
 
 After this, the new package can be built by running **Install and Restart**
 from the **Build** tab.
-
-To test the new package works as expected, run the following commands:
-
-```{r eval=FALSE}
-library(MyPkg)
-idxstats(ompBAM::example_BAM("Unsorted"), 2)
-idxstats(ompBAM::example_BAM("scRNAseq"), 2)
-```
-
-If you followed the above steps correctly, you will see the following output:
-
-```{r, include = FALSE}
-library(ompBAM)
-pkg_path = file.path(tempdir(), "MyPkg")
-use_ompBAM(pkg_path)
-devtools::document(pkg_path)
-devtools::load_all(pkg_path)
-library(MyPkg)
-```
-
-```{r}
-idxstats(ompBAM::example_BAM("Unsorted"), 2)
-```
-
-```{r}
-idxstats(ompBAM::example_BAM("scRNAseq"), 2)
-```
-
 
 # (1) Requirements to setting up a new R package to include ompBAM
 
