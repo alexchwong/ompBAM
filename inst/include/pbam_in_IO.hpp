@@ -71,6 +71,9 @@ inline int pbam_in::obtainChrs(std::vector<std::string> & s_chr_names, std::vect
 
 inline int pbam_in::check_file() {
   if(!IN->fail()) {
+    // Assign 2 Mb buffer for better performance:
+    IN->rdbuf()->pubsetbuf(INbuf, ompBAM_bufsize);
+
     // Assign IS_LENGTH
     IN->seekg(0, std::ios_base::end);
     IS_LENGTH = tellg();

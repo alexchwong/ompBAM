@@ -324,7 +324,9 @@ inline int pbam_in::read_file_to_buffer(char * buf, const size_t len) {
     #pragma omp parallel for num_threads(threads_to_use) schedule(static,1)
     #endif
     for(unsigned int k = 0; k < threads_to_use; k++) {
+      char mybuffer[ompBAM_bufsize];
       INchild.at(k).open(FILENAME, std::ios::in | std::ifstream::binary);
+      INchild.at(k).rdbuf()->pubsetbuf(mybuffer, ompBAM_bufsize);
       INchild.at(k).seekg(cur_pos + len_starts.at(k), std::ios_base::beg);
       INchild.at(k).read(buf + len_starts.at(k), len_chunks.at(k));
       INchild.at(k).close();

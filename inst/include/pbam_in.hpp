@@ -23,6 +23,8 @@ SOFTWARE.  */
 #ifndef _pbam_in
 #define _pbam_in
 
+const size_t ompBAM_bufsize = 1024 * 1024 * 2;
+
 /*
   Class Description
 */
@@ -137,7 +139,8 @@ class pbam_in {
     bool            multiFileRead         = true;
     std::string     FILENAME;
 // File particulars
-    std::ifstream    * IN;    
+    std::ifstream    * IN;
+    char INbuf[ompBAM_bufsize];
     size_t          IS_LENGTH;     // size of BAM file (Input Stream Length)
   
 // Header storage:
