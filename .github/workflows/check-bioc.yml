@@ -258,7 +258,7 @@ jobs:
       - name: Run revdep
         env:
           DISPLAY: 99.0
-          R_REVDEPCHECK_CHECK_ARGS = "--no-manual"
+          R_REVDEPCHECK_CHECK_ARGS: "--no-manual"
         run: |
           revdepcheck::revdep_check(
             num_workers = 2,
