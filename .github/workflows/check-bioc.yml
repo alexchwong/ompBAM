@@ -261,7 +261,7 @@ jobs:
           R_REVDEPCHECK_CHECK_ARGS: "--no-manual"
         run: |
           revdepcheck::revdep_check(
-            num_workers = 2,
+            num_workers = 1,
             timeout = as.difftime(30, units = "mins")
           )
         shell: Rscript {0}
