@@ -23,12 +23,11 @@ NULL
 #'
 #' @author Alex Chit Hei Wong
 #' 
-#' @docType package
 #' @name ompBAM-package
 #' @aliases ompBAM-package
 #' @keywords package
 #' @md
-NULL
+"_PACKAGE"
 
 #' Sets up the package in the given directory to use ompBAM
 #'

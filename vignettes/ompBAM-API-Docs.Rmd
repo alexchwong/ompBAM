@@ -30,6 +30,14 @@ knitr::opts_chunk$set(
 )
 ```
 
+# What's new?
+
+zlibbioc is now removed as a dependency. Users wishing to
+update their packages without zlibbioc should:
+- remove zlibbioc as a dependency on DESCRIPTION file
+- remove any reference to zlibbioc in their R files
+- edit Makevars.win (see section 1c)
+
 # (0) Installation and Quick-Start
 
 ### Installation
@@ -163,12 +171,11 @@ To do this, simply run `devtools::document()` to process roxygen2 tags.
 
 ## (1b) Dependencies required to compile with ompBAM
 
-To compile with ompBAM capabilities, the package must import both Rcpp and
-zlibbioc. Check that the following has been added to the DESCRIPTION file:
+To compile with ompBAM capabilities, the package must import Rcpp. Check that the following has been added to the DESCRIPTION file:
 
 ```{}
-Imports: Rcpp, zlibbioc
-LinkingTo: Rcpp, zlibbioc, ompBAM
+Imports: Rcpp
+LinkingTo: Rcpp, ompBAM
 ```
 
 Also, `use_ompBAM()` creates a "wrapper" function for the C++ function
@@ -181,7 +188,6 @@ Open this file to verify that the following has been added:
 ```{r eval=FALSE}
 #' @useDynLib myPkgName, .registration = TRUE
 #' @import Rcpp
-#' @import zlibbioc
 NULL
 
 #' @export
@@ -200,7 +206,6 @@ contain the following:
 
 export(idxstats)
 import(Rcpp)
-import(zlibbioc)
 useDynLib(myPkgName, .registration = TRUE)
 
 ```
@@ -216,7 +221,7 @@ section.
 ## (1c) Make Files
 
 use_ompBAM() has created two `make` files that instructs the compiler to link
-with OpenMP and the zlib library. You can view these files from within the
+with OpenMP. You can view these files from within the
 `src/` directory.
 
 Make files instruct the C++ compiler to link to the appropriate libraries at
@@ -243,21 +248,16 @@ documentation, but feel free to look at it. It is based on the `configure`
 script for the data.table R package on CRAN.
 
 For Windows installations, a second `make` file called "Makevars.win" is
-required. This is because zlib libraries are linked dynamically (see the
-zlibbioc vignette for more information). In windows systems, "Makevars.win"
+required. In windows systems, "Makevars.win"
 is used to build your package, and contains the following:
 
 ```{}
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) 
-PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS)
-
-ZLIB_CFLAGS+=$(shell echo 'zlibbioc::pkgconfig("PKG_CFLAGS")'|\
-    "${R_HOME}/bin/R" --vanilla --slave)
-PKG_LIBS+=$(shell echo 'zlibbioc::pkgconfig("PKG_LIBS_shared")' |\
-    "${R_HOME}/bin/R" --vanilla --slave)
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) -lz
 ```
 
-This will ensure that the zlib libraries are linked correctly to Windows
+Note that `-lz` will link to the zlib libraries. This will 
+ensure that the zlib libraries are linked correctly to Windows
 systems.
 
 ## (1d) OpenMP compatibility

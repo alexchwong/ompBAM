@@ -22,7 +22,7 @@ VignetteBuilder: knitr
 biocViews: Alignment, DataImport, RNASeq, Software, Sequencing, Transcriptomics,
   SingleCell
 Encoding: UTF-8
-RoxygenNote: 7.1.2
+RoxygenNote: 7.3.2
 URL: https://github.com/alexchwong/ompBAM
 BugReports: https://support.bioconductor.org/
 Config/testthat/edition: 3

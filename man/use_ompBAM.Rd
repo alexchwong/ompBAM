@@ -18,7 +18,7 @@ This function creates a new package in the given directory (unless one
 already exists).
 It then sets up the requisite dependencies and 'Make' and 'configure' files
 so that the source code will successfully compile and link to the appropriate
-external libraries (OpenMP, zlib) required for ompBAM. All 3 major platforms
+external libraries (OpenMP) required for ompBAM. All 3 major platforms
 (Linux, MacOS and Windows) are supported, although MacOS users must first
 install the required OpenMP libraries first. See details below.
 }

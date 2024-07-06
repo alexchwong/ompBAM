@@ -2,6 +2,7 @@
 % Please edit documentation in R/ompBAM.R
 \docType{package}
 \name{ompBAM-package}
+\alias{ompBAM}
 \alias{ompBAM-package}
 \title{ompBAM: C++ header library for parallel sequential reading
 of BAM files}
@@ -22,6 +23,14 @@ For a quick start guide and a full list of functionality, refer to
 the vignette
 \href{../doc/ompBAM-API-Docs.html}{\code{vignette("ompBAM-API-Docs", 
 package = "ompBAM")}}
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/alexchwong/ompBAM}
+  \item Report bugs at \url{https://support.bioconductor.org/}
+}
+
 }
 \author{
 Alex Chit Hei Wong
