@@ -14,7 +14,7 @@ Description: This packages provides C++ header files for developers wishing to
 	explanation of the functionality behind the example packaged included within
 	ompBAM.
 License: MIT + file LICENSE
-Imports: utils, Rcpp, zlibbioc
+Imports: utils, Rcpp
 Suggests: 
     RcppProgress, knitr, rmarkdown, roxygen2, devtools, usethis, desc, 
     testthat (>= 3.0.0)

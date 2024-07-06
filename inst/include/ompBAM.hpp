@@ -25,7 +25,6 @@ SOFTWARE.  */
 
 #include <fstream>    // std::ifstream
 
-// [[Rcpp::depends(zlibbioc)]]
 #include <zlib.h>     // For BAM decompression
 #include <zconf.h>
 

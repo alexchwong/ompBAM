@@ -1,4 +1,3 @@
-#' @import zlibbioc
 #' @import Rcpp
 NULL
 
@@ -37,7 +36,7 @@ NULL
 #' already exists).
 #' It then sets up the requisite dependencies and 'Make' and 'configure' files
 #' so that the source code will successfully compile and link to the appropriate
-#' external libraries (OpenMP, zlib) required for ompBAM. All 3 major platforms
+#' external libraries (OpenMP) required for ompBAM. All 3 major platforms
 #' (Linux, MacOS and Windows) are supported, although MacOS users must first
 #' install the required OpenMP libraries first. See details below.
 #' @details OpenMP is natively supported on Linux and Windows but 
@@ -95,10 +94,10 @@ use_ompBAM <- function(path = ".") {
         "Created src/ompBAM_example.cpp with idxstats_pbam() function")
     
     .omp_use_dependency("Rcpp", "Imports", proj_path)
-    .omp_use_dependency("zlibbioc", "Imports", proj_path)
+    # .omp_use_dependency("zlibbioc", "Imports", proj_path)
     .omp_use_dependency("ompBAM", "LinkingTo", proj_path)
     .omp_use_dependency("Rcpp", "LinkingTo", proj_path)
-    .omp_use_dependency("zlibbioc", "LinkingTo", proj_path)
+    # .omp_use_dependency("zlibbioc", "LinkingTo", proj_path)
     
     end_msg <- paste(proj_name, "successfully created in", proj_path)
     usethis::ui_done(end_msg)
@@ -211,7 +210,7 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
     write(paste0("#' @useDynLib ", proj_name, ", .registration = TRUE"),
         R_import_file, sep="\n")
     write("#' @import Rcpp", R_import_file, append = TRUE, sep="\n")
-    write("#' @import zlibbioc", R_import_file, append = TRUE, sep="\n")
+    # write("#' @import zlibbioc", R_import_file, append = TRUE, sep="\n")
     write("NULL", R_import_file, append = TRUE, sep="\n")
     write("", R_import_file, append = TRUE, sep="\n")
     write("#' @export", R_import_file, append = TRUE, sep="\n")
