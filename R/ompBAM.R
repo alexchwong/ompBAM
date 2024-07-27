@@ -1,4 +1,3 @@
-#' @import zlibbioc
 #' @import Rcpp
 NULL
 
@@ -24,12 +23,11 @@ NULL
 #'
 #' @author Alex Chit Hei Wong
 #' 
-#' @docType package
 #' @name ompBAM-package
 #' @aliases ompBAM-package
 #' @keywords package
 #' @md
-NULL
+"_PACKAGE"
 
 #' Sets up the package in the given directory to use ompBAM
 #'
@@ -95,10 +93,8 @@ use_ompBAM <- function(path = ".") {
         "Created src/ompBAM_example.cpp with idxstats_pbam() function")
     
     .omp_use_dependency("Rcpp", "Imports", proj_path)
-    .omp_use_dependency("zlibbioc", "Imports", proj_path)
     .omp_use_dependency("ompBAM", "LinkingTo", proj_path)
     .omp_use_dependency("Rcpp", "LinkingTo", proj_path)
-    .omp_use_dependency("zlibbioc", "LinkingTo", proj_path)
     
     end_msg <- paste(proj_name, "successfully created in", proj_path)
     usethis::ui_done(end_msg)
@@ -211,7 +207,6 @@ example_BAM <- function(dataset = c("Unsorted", "scRNAseq")) {
     write(paste0("#' @useDynLib ", proj_name, ", .registration = TRUE"),
         R_import_file, sep="\n")
     write("#' @import Rcpp", R_import_file, append = TRUE, sep="\n")
-    write("#' @import zlibbioc", R_import_file, append = TRUE, sep="\n")
     write("NULL", R_import_file, append = TRUE, sep="\n")
     write("", R_import_file, append = TRUE, sep="\n")
     write("#' @export", R_import_file, append = TRUE, sep="\n")

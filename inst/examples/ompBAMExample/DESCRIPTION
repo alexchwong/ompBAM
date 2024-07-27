@@ -10,6 +10,6 @@ Authors@R: c(person("Alex Chit Hei", "Wong", email="a.wong@centenary.org.au",
 		role=c("aut", "cre", "cph")))   
 Maintainer: Alex Wong <a.wong@centenary.org.au>
 License: MIT
-Imports: Rcpp, zlibbioc
-LinkingTo: Rcpp, zlibbioc, RcppProgress, ompBAM
+Imports: Rcpp
+LinkingTo: Rcpp, RcppProgress, ompBAM
 RoxygenNote: 7.1.1
