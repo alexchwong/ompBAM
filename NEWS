@@ -1,2 +1,5 @@
+Changes in version 1.9.1 (2024-07-27)
++ Remove dependency on zlibbioc
+
 Changes in version 0.99.0 (2021-09-15)
 + First submission to Bioconductor
