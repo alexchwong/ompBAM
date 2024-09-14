@@ -4,7 +4,7 @@ Title: C++ Library for OpenMP-based multi-threaded sequential profiling of
 Version: 1.9.2
 Date: 2024-09-14
 Authors@R: c(person("Alex Chit Hei", "Wong", email="alexchwong.github@gmail.com", 
-		role=c("aut", "cre", "cph"))
+		role=c("aut", "cre", "cph")))
 Description: This packages provides C++ header files for developers wishing to
     create R packages that processes BAM files. ompBAM automates file access,
 	memory management, and handling of multiple threads 'behind the scenes', so
